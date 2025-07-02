@@ -89,10 +89,36 @@ This is a full-stack business management system built with React, Express, and P
 - **Node Modules**: nodejs-20, web, and postgresql-16 Replit modules
 - **Build Process**: npm run build creates production-ready assets
 
+## Docker 배포
+
+### Docker 파일 구성
+- **Dockerfile**: 프로덕션용 컨테이너 빌드 설정
+- **Dockerfile.dev**: 개발용 핫 리로드 지원 컨테이너
+- **docker-compose.yml**: PostgreSQL과 함께 전체 시스템 실행
+- **docker-compose.dev.yml**: 개발 환경용 구성
+- **init.sql**: 데이터베이스 초기화 스크립트
+
+### 빠른 실행
+```bash
+# 프로덕션 모드
+docker-compose up -d
+
+# 개발 모드
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+### 특징
+- Node.js 20 Alpine 기반 경량 이미지
+- PostgreSQL 16 데이터베이스 자동 설정
+- 볼륨을 통한 데이터 영속성
+- 헬스체크를 통한 의존성 관리
+- 개발용 핫 리로드 지원
+
 ## Changelog
 
 Changelog:
-- June 27, 2025. Initial setup
+- July 2, 2025: Docker 컨테이너 지원 추가 - 복잡한 의존성 설치 없이 Linux/Debian 환경에서 한번에 실행 가능
+- June 27, 2025: Initial setup
 
 ## User Preferences
 
