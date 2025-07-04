@@ -1,35 +1,29 @@
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema matching Django Employee model
-export const userSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  role: z.enum(['ENGINEER', 'MANAGER']),
-  created_at: z.string(),
-  updated_at: z.string(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  role: text("role").notNull().default("ENGINEER"), // MANAGER or ENGINEER
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export type User = z.infer<typeof userSchema>;
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  role: true,
+});
 
-// Login request schema
 export const loginSchema = z.object({
-  username: z.string().min(1, "사용자명을 입력해주세요"),
+  username: z.string().min(1, "이름을 입력해주세요"),
 });
 
-export type LoginRequest = z.infer<typeof loginSchema>;
-
-// Update role request schema
 export const updateRoleSchema = z.object({
-  role: z.enum(['ENGINEER', 'MANAGER']),
+  userId: z.number(),
+  role: z.enum(["MANAGER", "ENGINEER"]),
 });
 
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type LoginRequest = z.infer<typeof loginSchema>;
 export type UpdateRoleRequest = z.infer<typeof updateRoleSchema>;
-
-// System stats schema
-export const systemStatsSchema = z.object({
-  totalUsers: z.number(),
-  activeSessions: z.number(),
-  systemStatus: z.string(),
-});
-
-export type SystemStats = z.infer<typeof systemStatsSchema>;
