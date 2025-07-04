@@ -8,5 +8,6 @@ dependencies = [
     "django-cors-headers>=4.7.0",
     "djangorestframework>=3.16.0",
     "psycopg2-binary>=2.9.10",
+    "pymysql>=1.1.1",
     "python-dotenv>=1.1.1",
 ]

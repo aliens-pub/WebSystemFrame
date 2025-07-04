@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack business management system built with React, Express, and PostgreSQL. The application features role-based authentication with two user roles (MANAGER and ENGINEER), a clean modern UI using shadcn/ui components, and a scalable architecture designed for business operations management.
+This is a full-stack business management system built with React and Django. The application features role-based authentication with two user roles (MANAGER and ENGINEER), a clean modern UI using shadcn/ui components, and a scalable architecture designed for business operations management. The system uses MySQL database with employee table for user management.
 
 ## System Architecture
 
@@ -15,12 +15,12 @@ This is a full-stack business management system built with React, Express, and P
 - **Build Tool**: Vite with hot module replacement
 
 ### Backend Architecture
-- **Runtime**: Node.js with Express.js
-- **Language**: TypeScript with ES modules
-- **Database**: PostgreSQL with Drizzle ORM
-- **Database Provider**: Neon serverless PostgreSQL
+- **Framework**: Django 5.2.4 with Django REST Framework
+- **Language**: Python 3.11+
+- **Database**: MySQL with PyMySQL connector
 - **API Design**: RESTful endpoints with proper error handling
-- **Development**: TSX for TypeScript execution
+- **Authentication**: Django session-based authentication
+- **Development**: Django development server
 
 ### Authentication System
 - **Strategy**: Simple token-based authentication (mock JWT tokens)
@@ -117,6 +117,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
+- July 4, 2025: Express.js에서 Django로 백엔드 완전 마이그레이션 완료 - MySQL 데이터베이스 연결, Employee 모델 구현, 세션 기반 인증 시스템 적용
 - July 2, 2025: Docker 컨테이너 지원 추가 - 복잡한 의존성 설치 없이 Linux/Debian 환경에서 한번에 실행 가능
 - June 27, 2025: Initial setup
 

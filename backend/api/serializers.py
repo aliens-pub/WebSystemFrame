@@ -1,12 +1,11 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
-from .models import User
+from .models import Employee
 
-class UserSerializer(serializers.ModelSerializer):
+class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = ['id', 'username', 'role', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        model = Employee
+        fields = ['id', 'username', 'role', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -17,7 +16,7 @@ class LoginSerializer(serializers.Serializer):
         return value
 
 class UpdateRoleSerializer(serializers.Serializer):
-    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+    role = serializers.ChoiceField(choices=Employee.ROLE_CHOICES)
     
     def validate_role(self, value):
         if value not in ['ENGINEER', 'MANAGER']:
