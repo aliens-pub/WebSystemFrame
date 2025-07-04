@@ -11,7 +11,11 @@ if (process.env.NODE_ENV === 'development') {
   
   const viteProcess = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', '5000'], {
     cwd: path.join(__dirname, '../'),
-    stdio: 'inherit'
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      VITE_ALLOWED_HOSTS: 'all'
+    }
   });
   
   viteProcess.on('error', (error) => {
