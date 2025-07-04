@@ -152,7 +152,18 @@ export default defineConfig({
 
 **파일: `server/index.ts`**
 
-**포트 바인딩 수정:**
+**현재 코드 확인:**
+```typescript
+app.listen(5000, '0.0.0.0', () => {
+  console.log('Proxy server running on port 5000');
+});
+```
+
+**위 코드가 이미 올바르게 설정되어 있습니다.** 추가 수정이 필요하지 않습니다.
+- `5000`: 프록시 서버 포트
+- `'0.0.0.0'`: 외부 IP에서 접속 가능하도록 설정
+
+**만약 다른 포트를 사용하고 싶다면:**
 ```typescript
 const PORT = process.env.PORT || 5000;
 
