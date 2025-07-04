@@ -16,3 +16,5 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 INSERT INTO users (username, role) 
 VALUES ('admin', 'MANAGER')
 ON CONFLICT (username) DO NOTHING;
+
+-- Note: New users will be created with MANAGER role by default
