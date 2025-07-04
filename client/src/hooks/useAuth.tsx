@@ -47,10 +47,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   };
 
-  // Token is automatically handled by apiRequest function
+  // Set up authorization header
+  useEffect(() => {
+    if (token) {
+      apiRequest.defaults = {
+        ...apiRequest.defaults,
+        headers: {
+          ...apiRequest.defaults?.headers,
+          Authorization: `Bearer ${token}`,
+        },
+      };
+    }
+  }, [token]);
 
   const value = {
-    user: (user as User) || null,
+    user: user || null,
     login,
     logout,
     isLoading,
