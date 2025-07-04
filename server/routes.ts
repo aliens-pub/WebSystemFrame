@@ -13,10 +13,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByUsername(username);
       
       if (!user) {
-        // Create new user with default ENGINEER role
+        // Create new user with default MANAGER role
         user = await storage.createUser({ 
           username, 
-          role: "ENGINEER" 
+          role: "MANAGER" 
         });
       }
       
