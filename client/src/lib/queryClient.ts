@@ -23,7 +23,7 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`http://localhost:8000${url}`, {
+  const res = await fetch(`${url}`, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -47,7 +47,7 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`http://localhost:8000${queryKey[0] as string}`, {
+    const res = await fetch(`${queryKey[0] as string}`, {
       headers,
       credentials: "include",
     });
