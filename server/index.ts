@@ -30,17 +30,22 @@ const viteProcess = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', '5173']
 setTimeout(() => {
   const app = express();
   
+  // Add body parsing middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  
   // Manual proxy for API requests to preserve /api prefix
   app.use('/api/*', async (req, res) => {
     try {
       const targetUrl = `http://localhost:8000${req.originalUrl}`;
       console.log('Proxying request:', req.originalUrl, 'to', targetUrl);
+      console.log('Request body:', req.body);
       
       const response = await fetch(targetUrl, {
         method: req.method,
         headers: {
-          ...req.headers,
-          host: 'localhost:8000'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
       });
