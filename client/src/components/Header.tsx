@@ -2,18 +2,14 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { LogOut, Box, Lock, UserRoundCheck, Settings, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 export function Header() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
+  const [isSettingsHovered, setIsSettingsHovered] = useState(false);
 
   const menuItems = [
     { name: "메뉴1", path: "/menu1" },
@@ -66,32 +62,35 @@ export function Header() {
               
               {/* Settings Dropdown */}
               {canAccessSettings ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <div
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
-                        isSettingsActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-gray-700 hover:text-primary hover:bg-primary/5"
-                      }`}
-                    >
-                      <Settings className="mr-1 h-4 w-4" />
-                      설정
-                      <ChevronDown className="ml-1 h-3 w-3" />
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {settingsMenuItems.map((item) => (
-                      <DropdownMenuItem key={item.name} asChild>
-                        <Link href={item.path}>
-                          <div className="w-full cursor-pointer">
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setIsSettingsHovered(true)}
+                  onMouseLeave={() => setIsSettingsHovered(false)}
+                >
+                  <div
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
+                      isSettingsActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-700 hover:text-primary hover:bg-primary/5"
+                    }`}
+                  >
+                    <Settings className="mr-1 h-4 w-4" />
+                    설정
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </div>
+                  
+                  {isSettingsHovered && (
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                      {settingsMenuItems.map((item) => (
+                        <Link key={item.name} href={item.path}>
+                          <div className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
                             {item.name}
                           </div>
                         </Link>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="px-3 py-2 rounded-md text-sm font-medium text-gray-400 cursor-not-allowed flex items-center">
                   <Settings className="mr-1 h-4 w-4" />
@@ -155,32 +154,35 @@ export function Header() {
             
             {/* Mobile Settings Dropdown */}
             {canAccessSettings ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
-                      isSettingsActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-gray-700 hover:text-primary hover:bg-primary/5"
-                    }`}
-                  >
-                    <Settings className="mr-1 h-4 w-4" />
-                    설정
-                    <ChevronDown className="ml-1 h-3 w-3" />
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {settingsMenuItems.map((item) => (
-                    <DropdownMenuItem key={item.name} asChild>
-                      <Link href={item.path}>
-                        <div className="w-full cursor-pointer">
+              <div 
+                className="relative"
+                onMouseEnter={() => setIsSettingsHovered(true)}
+                onMouseLeave={() => setIsSettingsHovered(false)}
+              >
+                <div
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
+                    isSettingsActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-gray-700 hover:text-primary hover:bg-primary/5"
+                  }`}
+                >
+                  <Settings className="mr-1 h-4 w-4" />
+                  설정
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </div>
+                
+                {isSettingsHovered && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                    {settingsMenuItems.map((item) => (
+                      <Link key={item.name} href={item.path}>
+                        <div className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
                           {item.name}
                         </div>
                       </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="px-3 py-2 rounded-md text-sm font-medium text-gray-400 cursor-not-allowed flex items-center">
                 <Settings className="mr-1 h-4 w-4" />
