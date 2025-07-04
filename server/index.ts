@@ -30,11 +30,30 @@ const viteProcess = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', '5173']
 setTimeout(() => {
   const app = express();
   
-  // Proxy API requests to Django
-  app.use('/api', createProxyMiddleware({
-    target: 'http://localhost:8000',
-    changeOrigin: true,
-  }));
+  // Manual proxy for API requests to preserve /api prefix
+  app.use('/api/*', async (req, res) => {
+    try {
+      const targetUrl = `http://localhost:8000${req.originalUrl}`;
+      console.log('Proxying request:', req.originalUrl, 'to', targetUrl);
+      
+      const response = await fetch(targetUrl, {
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: 'localhost:8000'
+        },
+        body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
+      });
+      
+      const data = await response.text();
+      res.status(response.status);
+      res.set(Object.fromEntries(response.headers.entries()));
+      res.send(data);
+    } catch (error) {
+      console.error('Proxy error:', error);
+      res.status(500).json({ error: 'Proxy error' });
+    }
+  });
   
   // Proxy everything else to Vite
   app.use('/', createProxyMiddleware({
