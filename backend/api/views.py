@@ -13,11 +13,19 @@ def login_view(request):
     if serializer.is_valid():
         username = serializer.validated_data['username']
         
+        # Special admin user gets MANAGER role (for deployment testing)
+        default_role = 'MANAGER' if username == 'admin.system' else 'ENGINEER'
+        
         # Get or create employee
         employee, created = Employee.objects.get_or_create(
             username=username,
-            defaults={'role': 'ENGINEER'}
+            defaults={'role': default_role}
         )
+        
+        # If admin.system user already exists but not MANAGER, update role
+        if username == 'admin.system' and employee.role != 'MANAGER':
+            employee.role = 'MANAGER'
+            employee.save()
         
         # Store employee info in session
         request.session['employee_id'] = employee.id
