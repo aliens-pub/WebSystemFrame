@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Box, Users, Activity, Settings } from "lucide-react";
 
 interface SystemStats {
@@ -10,9 +9,22 @@ interface SystemStats {
 }
 
 export function MainContent() {
-  const { data: stats, isLoading } = useQuery<SystemStats>({
-    queryKey: ["/api/stats"],
-  });
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Mock loading delay and set mock stats
+    const timer = setTimeout(() => {
+      setStats({
+        totalUsers: 5,
+        activeSessions: 3,
+        systemStatus: "정상"
+      });
+      setIsLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -59,7 +71,7 @@ export function MainContent() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">총 사용자</p>
                 {isLoading ? (
-                  <Skeleton className="h-8 w-12" />
+                  <div className="h-8 w-12 bg-gray-200 rounded animate-pulse"></div>
                 ) : (
                   <p className="text-2xl font-semibold text-gray-900">
                     {stats?.totalUsers || 0}
@@ -79,7 +91,7 @@ export function MainContent() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">활성 세션</p>
                 {isLoading ? (
-                  <Skeleton className="h-8 w-12" />
+                  <div className="h-8 w-12 bg-gray-200 rounded animate-pulse"></div>
                 ) : (
                   <p className="text-2xl font-semibold text-gray-900">
                     {stats?.activeSessions || 0}
@@ -99,7 +111,7 @@ export function MainContent() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">시스템 상태</p>
                 {isLoading ? (
-                  <Skeleton className="h-6 w-16" />
+                  <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
                 ) : (
                   <p className="text-lg font-semibold text-green-600">
                     {stats?.systemStatus || "정상"}

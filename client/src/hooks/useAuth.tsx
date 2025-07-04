@@ -1,7 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import type { User, LoginRequest } from "@shared/schema";
+import type { User, LoginRequest } from "@/types/schema";
 
 interface AuthContextType {
   user: User | null;
@@ -14,54 +12,49 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem("authToken")
-  );
-  const queryClient = useQueryClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
-    enabled: !!token,
-    retry: false,
-  });
-
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginRequest) => {
-      const response = await apiRequest("POST", "/api/auth/login", data);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setToken(data.token);
-      localStorage.setItem("authToken", data.token);
-      queryClient.setQueryData(["/api/auth/me"], data.user);
-    },
-  });
+  // Load user from localStorage on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem("currentUser");
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error("Failed to parse saved user:", error);
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
   const login = async (data: LoginRequest) => {
-    await loginMutation.mutateAsync(data);
+    setIsLoading(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Create mock user
+    const mockUser: User = {
+      id: Date.now(),
+      username: data.username,
+      role: "ENGINEER", // Default role
+      createdAt: new Date(),
+    };
+    
+    // Save to localStorage
+    localStorage.setItem("currentUser", JSON.stringify(mockUser));
+    setUser(mockUser);
+    setIsLoading(false);
   };
 
   const logout = () => {
-    setToken(null);
-    localStorage.removeItem("authToken");
-    queryClient.clear();
+    localStorage.removeItem("currentUser");
+    setUser(null);
   };
 
-  // Set up authorization header
-  useEffect(() => {
-    if (token) {
-      apiRequest.defaults = {
-        ...apiRequest.defaults,
-        headers: {
-          ...apiRequest.defaults?.headers,
-          Authorization: `Bearer ${token}`,
-        },
-      };
-    }
-  }, [token]);
-
   const value = {
-    user: user || null,
+    user,
     login,
     logout,
     isLoading,
