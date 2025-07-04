@@ -1,203 +1,298 @@
-# Django + React 개발 가이드
+# WebSystemFrame 프로젝트 새로운 가상환경 배포 가이드
 
-## 프로젝트 구조
+## 개요
+이 가이드는 Replit에서 개발된 WebSystemFrame 프로젝트를 Debian 기반 가상환경으로 이전하여 배포하는 방법을 설명합니다.
 
-```
-프로젝트 루트/
-├── backend/                # Django 백엔드
-│   ├── api/               # API 앱
-│   │   ├── models.py      # Employee 모델
-│   │   ├── views.py       # API 뷰
-│   │   ├── serializers.py # 데이터 직렬화
-│   │   └── urls.py        # API URL 라우팅
-│   ├── business_system/   # Django 프로젝트 설정
-│   │   ├── settings.py    # 데이터베이스 및 앱 설정
-│   │   └── urls.py        # 메인 URL 설정
-│   └── manage.py          # Django 관리 명령어
-├── client/                # React 프론트엔드
-│   └── src/
-│       ├── components/    # UI 컴포넌트
-│       ├── pages/         # 페이지 컴포넌트
-│       ├── hooks/         # 커스텀 훅
-│       └── lib/           # 유틸리티 함수
-├── start_dev.py           # 개발 서버 실행 스크립트
-├── start_django.py        # Django 서버 단독 실행
-└── guide.md               # 이 가이드 파일
-```
+**목표 환경 특징:**
+- 운영체제: Debian
+- 네트워크: 외부 인터넷망과 분리된 내부 네트워크
+- 데이터베이스: MySQL (pymysql 연결)
+- 용도: 내부 네트워크 사용자들을 위한 웹 시스템
 
-## 시스템 개요
+## 1. 사전 준비사항
 
-- **백엔드**: Django REST Framework (포트 8000)
-- **프론트엔드**: React + Vite (포트 5173)
-- **데이터베이스**: MySQL
-- **인증**: 세션 기반 인증
-
-## 필수 의존성 설치
-
-### Python 패키지 설치
+### 1.1 시스템 패키지 설치
 ```bash
-pip install django djangorestframework django-cors-headers pymysql python-dotenv
+# 시스템 업데이트
+sudo apt update && sudo apt upgrade -y
+
+# 필수 패키지 설치
+sudo apt install -y curl git build-essential
+
+# Node.js 20.x 설치
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Python 3.11 설치 (Debian 12에는 기본 포함)
+sudo apt install -y python3 python3-pip python3-venv
+
+# MySQL 클라이언트 설치
+sudo apt install -y mysql-client libmysqlclient-dev
 ```
 
-### Node.js 패키지 설치
+### 1.2 프로젝트 다운로드
 ```bash
+# 프로젝트 디렉토리 생성 및 이동
+mkdir -p /home/websystem
+cd /home/websystem
+
+# 프로젝트 파일 복사 (USB, 네트워크 공유 등을 통해)
+# 또는 git clone (내부 git 서버가 있는 경우)
+```
+
+## 2. 백엔드 설정 (Django)
+
+### 2.1 Python 가상환경 생성
+```bash
+cd /home/websystem
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2.2 Python 패키지 설치
+```bash
+# 기본 패키지 설치
+pip install django==5.2.4
+pip install djangorestframework
+pip install django-cors-headers
+pip install pymysql
+pip install python-dotenv
+
+# 또는 requirements.txt가 있는 경우
+pip install -r requirements.txt
+```
+
+### 2.3 Django 설정 파일 수정
+
+**파일: `backend/business_system/settings.py`**
+
+**기존 데이터베이스 설정을 다음과 같이 변경:**
+```python
+# 기존 코드 (83~91줄 근처)
+import dj_database_url
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgresql://postgres:@localhost:5432/business_system'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
+```
+
+**새로운 코드로 교체:**
+```python
+import pymysql
+pymysql.install_as_MySQLdb()
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'db',  # 실제 데이터베이스 이름으로 변경
+        'USER': 'user',  # 실제 사용자명으로 변경
+        'PASSWORD': 'password',  # 실제 비밀번호로 변경
+        'HOST': '12.123.12.123',  # 실제 DB IP로 변경
+        'PORT': '12345',  # 실제 포트로 변경
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
+}
+```
+
+**ALLOWED_HOSTS 설정 추가:**
+```python
+# 현재 빈 리스트인 ALLOWED_HOSTS를 다음과 같이 변경
+ALLOWED_HOSTS = ['*']  # 내부 네트워크에서만 사용하므로 모든 IP 허용
+```
+
+### 2.4 Employee 테이블 생성
+```bash
+# Django 마이그레이션 파일 생성
+cd backend
+python manage.py makemigrations
+
+# 데이터베이스에 테이블 생성
+python manage.py migrate
+```
+
+## 3. 프론트엔드 설정 (React)
+
+### 3.1 Node.js 패키지 설치
+```bash
+cd /home/websystem
 npm install
 ```
 
-## 개발 서버 실행 방법
+### 3.2 Vite 설정 수정
 
-### 1. 전체 시스템 실행 (추천)
-```bash
-python start_dev.py
+**파일: `vite.config.ts`**
+
+**기존 서버 설정 확인 및 수정:**
+```typescript
+export default defineConfig({
+  // ... 기존 설정 유지
+  server: {
+    host: '0.0.0.0',  // 외부 접속 허용
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+});
 ```
-- Django 백엔드 (포트 8000)와 React 프론트엔드 (포트 5173)를 동시에 실행
-- 자동으로 마이그레이션 실행
-- 브라우저에서 http://localhost:5173 접속
 
-### 2. 개별 서버 실행
+## 4. 프록시 서버 설정
 
-#### Django 백엔드만 실행
-```bash
-python start_django.py
+### 4.1 프록시 서버 수정
+
+**파일: `server/index.ts`**
+
+**포트 바인딩 수정:**
+```typescript
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Proxy server running on http://0.0.0.0:${PORT}`);
+});
 ```
-또는
+
+## 5. 시스템 실행
+
+### 5.1 개발 서버 실행
+
+**방법 1: 개별 실행**
 ```bash
-cd backend
+# 터미널 1: Django 백엔드 실행
+cd /home/websystem/backend
+source ../venv/bin/activate
 python manage.py runserver 0.0.0.0:8000
-```
 
-#### React 프론트엔드만 실행
-```bash
+# 터미널 2: React 프론트엔드 실행
+cd /home/websystem
 npm run dev
+
+# 터미널 3: 프록시 서버 실행
+cd /home/websystem
+npm run server
 ```
 
-## 데이터베이스 설정
-
-### MySQL 데이터베이스 설정
-1. MySQL 서버 실행
-2. 데이터베이스 생성:
-   ```sql
-   CREATE DATABASE business_system;
-   ```
-
-3. 환경 변수 설정 (선택사항):
-   ```bash
-   export MYSQL_DATABASE=business_system
-   export MYSQL_USER=root
-   export MYSQL_PASSWORD=your_password
-   export MYSQL_HOST=localhost
-   export MYSQL_PORT=3306
-   ```
-
-### 마이그레이션 실행
+**방법 2: 통합 실행**
 ```bash
-cd backend
-python manage.py makemigrations
-python manage.py migrate
+cd /home/websystem
+npm run dev  # 모든 서버를 동시에 실행
 ```
 
-## 주요 기능
-
-### 1. 사용자 관리
-- **로그인**: 사용자명으로 로그인 (자동 계정 생성)
-- **권한 관리**: ENGINEER/MANAGER 권한 시스템
-- **계정 생성**: 로그인 시 자동으로 employee 테이블에 데이터 저장
-
-### 2. 권한 시스템
-- **ENGINEER**: 기본 권한
-- **MANAGER**: 관리자 권한 (다른 사용자 권한 변경 가능)
-
-### 3. API 엔드포인트
-- `POST /api/auth/login/` - 로그인
-- `GET /api/auth/me/` - 현재 사용자 정보
-- `POST /api/auth/logout/` - 로그아웃
-- `GET /api/users/` - 사용자 목록 (MANAGER만)
-- `PUT /api/users/{id}/role/` - 사용자 권한 변경 (MANAGER만)
-- `GET /api/stats/` - 시스템 통계
-
-## 사용 예시
-
-### 1. 로그인 과정
-1. 사용자가 username 입력 (예: "woobin")
-2. 백엔드에서 employee 테이블에 자동 생성
-3. 기본 권한 ENGINEER로 설정
-4. 로그인 성공
-
-### 2. 권한 변경 과정
-1. MANAGER 권한 사용자로 로그인
-2. 사용자 관리 페이지에서 다른 사용자 선택
-3. 권한을 ENGINEER → MANAGER로 변경
-4. 변경 사항이 employee 테이블에 반영
-
-## 문제 해결
-
-### 1. 마이그레이션 에러
+### 5.2 접속 확인
 ```bash
-cd backend
-python manage.py makemigrations api
-python manage.py migrate
+# 웹 브라우저에서 다음 주소로 접속
+http://[서버IP]:5000
 ```
 
-### 2. 포트 충돌
-- Django: 포트 8000 사용
-- React: 포트 5173 사용
-- 다른 애플리케이션이 해당 포트를 사용 중이면 종료 후 재시도
+## 6. 데이터베이스 초기 설정
 
-### 3. MySQL 연결 에러
+### 6.1 관리자 계정 생성
+시스템 첫 실행 후 다음 계정으로 로그인하면 자동으로 관리자 권한이 부여됩니다:
+
+**계정명:** `admin.system`
+**권한:** MANAGER (자동 부여)
+
+### 6.2 사용자 데이터 복원 (선택사항)
+기존 사용자 데이터를 복원하려면 MySQL에서 다음 SQL 실행:
+```sql
+INSERT INTO employee (username, role, created_at, updated_at) VALUES 
+('testuser', 'ENGINEER', NOW(), NOW()),
+('woobin', 'ENGINEER', NOW(), NOW()),
+('woobin.jeong', 'ENGINEER', NOW(), NOW()),
+('admin.system', 'MANAGER', NOW(), NOW());
+```
+
+## 7. 방화벽 설정
+
+### 7.1 필요한 포트 열기
+```bash
+# UFW 방화벽 설정 (설치되어 있는 경우)
+sudo ufw allow 5000/tcp  # 프록시 서버
+sudo ufw allow 8000/tcp  # Django 백엔드
+sudo ufw allow 5173/tcp  # React 프론트엔드
+```
+
+## 8. 서비스 등록 (선택사항)
+
+### 8.1 Systemd 서비스 생성
+영구 실행을 위한 systemd 서비스 파일 생성:
+
+**파일: `/etc/systemd/system/websystem.service`**
+```ini
+[Unit]
+Description=WebSystemFrame Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/home/websystem
+ExecStart=/usr/bin/npm run dev
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**서비스 활성화:**
+```bash
+sudo systemctl enable websystem
+sudo systemctl start websystem
+sudo systemctl status websystem
+```
+
+## 9. 문제 해결
+
+### 9.1 데이터베이스 연결 오류
 - MySQL 서버가 실행 중인지 확인
-- 데이터베이스 인증 정보 확인
-- pymysql 패키지 설치 확인
+- 방화벽에서 MySQL 포트가 열려있는지 확인
+- 사용자 권한이 올바른지 확인
 
-### 4. CORS 에러
-- Django settings.py에서 CORS 설정 확인
-- django-cors-headers 패키지 설치 확인
+### 9.2 프론트엔드 연결 오류
+- 프록시 서버가 정상 실행되는지 확인
+- Django 백엔드가 8000번 포트에서 실행되는지 확인
+- CORS 설정이 올바른지 확인
 
-## 개발 팁
+### 9.3 권한 오류
+- 파일 소유권과 권한 확인
+- Python 가상환경 활성화 확인
+- Node.js 버전 확인 (20.x 권장)
 
-### 1. 디버깅
-- Django 로그: 터미널에서 Django 서버 로그 확인
-- React 로그: 브라우저 개발자 도구 Console 탭 확인
+## 10. 보안 고려사항
 
-### 2. 데이터베이스 관리
+### 10.1 내부 네트워크 전용
+- 이 설정은 내부 네트워크 전용입니다
+- 외부 인터넷에 노출하지 마세요
+- 필요시 HTTPS 인증서 적용을 고려하세요
+
+### 10.2 데이터베이스 보안
+- 데이터베이스 접근 권한을 최소화하세요
+- 정기적인 백업을 수행하세요
+- 사용자 비밀번호 정책을 수립하세요
+
+## 11. 추가 정보
+
+### 11.1 로그 확인
 ```bash
-# Django 관리자 계정 생성
-cd backend
-python manage.py createsuperuser
+# Django 로그 확인
+tail -f /var/log/django.log
 
-# Django 관리자 페이지 접속
-# http://localhost:8000/admin/
+# 시스템 로그 확인
+journalctl -u websystem -f
 ```
 
-### 3. API 테스트
-```bash
-# 로그인 테스트
-curl -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "testuser"}'
+### 11.2 성능 최적화
+- 프로덕션 환경에서는 DEBUG=False 설정
+- 정적 파일 서빙을 위한 nginx 설정 고려
+- 데이터베이스 연결 풀링 설정
 
-# 사용자 목록 조회
-curl -X GET http://localhost:8000/api/users/ \
-  -H "Cookie: sessionid=YOUR_SESSION_ID"
-```
-
-## 프로덕션 배포
-
-### 1. 환경 변수 설정
-```bash
-export DJANGO_SECRET_KEY="your-secret-key"
-export MYSQL_PASSWORD="your-production-password"
-export DEBUG=False
-```
-
-### 2. 정적 파일 수집
-```bash
-cd backend
-python manage.py collectstatic
-```
-
-### 3. 프론트엔드 빌드
-```bash
-npm run build
-```
-
-이 가이드를 따라 Django 백엔드와 React 프론트엔드를 성공적으로 실행할 수 있습니다.
+이 가이드를 따라 진행하면 새로운 가상환경에서 WebSystemFrame 프로젝트를 성공적으로 실행할 수 있습니다.
