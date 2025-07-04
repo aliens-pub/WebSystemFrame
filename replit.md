@@ -118,6 +118,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
+- July 4, 2025: 프록시 서버 및 로그인 오류 해결 완료 - Django URL 패턴 수정, CSRF 비활성화, 요청 본문 파싱 추가로 로그인 API 정상 작동, admin.system 특별 관리자 계정 추가 (MANAGER 권한 자동 부여)
 - July 4, 2025: Django 백엔드 설정 수정 및 앱 실행 성공 - MySQL에서 PostgreSQL로 데이터베이스 변경, 프록시 서버 설정으로 Django+React 통합 개발 환경 구축 완료
 - July 4, 2025: Express.js에서 Django로 백엔드 완전 마이그레이션 완료 - Employee 모델 구현, 세션 기반 인증 시스템 적용
 - July 2, 2025: Docker 컨테이너 지원 추가 - 복잡한 의존성 설치 없이 Linux/Debian 환경에서 한번에 실행 가능
