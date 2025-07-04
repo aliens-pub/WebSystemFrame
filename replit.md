@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack business management system built with React and Django. The application features role-based authentication with two user roles (MANAGER and ENGINEER), a clean modern UI using shadcn/ui components, and a scalable architecture designed for business operations management. The system uses MySQL database with employee table for user management.
+This is a full-stack business management system built with React and Django. The application features role-based authentication with two user roles (MANAGER and ENGINEER), a clean modern UI using shadcn/ui components, and a scalable architecture designed for business operations management. The system uses PostgreSQL database with employee table for user management.
 
 ## System Architecture
 
@@ -17,10 +17,10 @@ This is a full-stack business management system built with React and Django. The
 ### Backend Architecture
 - **Framework**: Django 5.2.4 with Django REST Framework
 - **Language**: Python 3.11+
-- **Database**: MySQL with PyMySQL connector
+- **Database**: PostgreSQL with psycopg2-binary connector
 - **API Design**: RESTful endpoints with proper error handling
 - **Authentication**: Django session-based authentication
-- **Development**: Django development server
+- **Development**: Django development server on port 8000
 
 ### Authentication System
 - **Strategy**: Simple token-based authentication (mock JWT tokens)
@@ -74,15 +74,16 @@ This is a full-stack business management system built with React and Django. The
 ## Deployment Strategy
 
 ### Development Environment
-- **Local Development**: Vite dev server with Express backend
+- **Local Development**: Vite dev server (port 5173) with Django backend (port 8000)
+- **Proxy Server**: Node.js proxy server on port 5000 routes API calls to Django and frontend to Vite
 - **Hot Reload**: Full-stack hot module replacement
-- **Database**: Neon serverless PostgreSQL instance
+- **Database**: PostgreSQL database instance with dj-database-url integration
 
 ### Production Build
 - **Frontend**: Vite builds optimized static assets
-- **Backend**: esbuild bundles server code for Node.js
+- **Backend**: Django production server with proper WSGI configuration
 - **Deployment Target**: Replit autoscale deployment
-- **Port Configuration**: Server runs on port 5000, exposed as port 80
+- **Port Configuration**: Proxy server runs on port 5000, exposed as port 80
 
 ### Environment Configuration
 - **Database**: Requires DATABASE_URL environment variable
@@ -117,7 +118,8 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
-- July 4, 2025: Express.js에서 Django로 백엔드 완전 마이그레이션 완료 - MySQL 데이터베이스 연결, Employee 모델 구현, 세션 기반 인증 시스템 적용
+- July 4, 2025: Django 백엔드 설정 수정 및 앱 실행 성공 - MySQL에서 PostgreSQL로 데이터베이스 변경, 프록시 서버 설정으로 Django+React 통합 개발 환경 구축 완료
+- July 4, 2025: Express.js에서 Django로 백엔드 완전 마이그레이션 완료 - Employee 모델 구현, 세션 기반 인증 시스템 적용
 - July 2, 2025: Docker 컨테이너 지원 추가 - 복잡한 의존성 설치 없이 Linux/Debian 환경에서 한번에 실행 가능
 - June 27, 2025: Initial setup
 
