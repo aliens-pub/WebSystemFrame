@@ -8,7 +8,7 @@ export interface User {
 }
 
 export const loginSchema = z.object({
-  username: z.string().min(1, "사용자명을 입력하세요"),
+  username: z.string().min(1, "이름을 입력해주세요"),
 });
 
 export const updateRoleSchema = z.object({
