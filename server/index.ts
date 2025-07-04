@@ -1,40 +1,40 @@
-import { spawn } from 'child_process';
+import { createServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// In development mode, start the Vite dev server
+async function startViteServer() {
+  try {
+    const server = await createServer({
+      configFile: path.join(__dirname, '../vite.config.ts'),
+      server: {
+        host: '0.0.0.0',
+        port: 5000,
+        strictPort: true
+      }
+    });
+
+    await server.listen();
+    console.log('Vite dev server running on http://0.0.0.0:5000');
+    
+    // Handle graceful shutdown
+    process.on('SIGTERM', async () => {
+      await server.close();
+    });
+    
+    process.on('SIGINT', async () => {
+      await server.close();
+    });
+  } catch (error) {
+    console.error('Failed to start Vite server:', error);
+    process.exit(1);
+  }
+}
+
 if (process.env.NODE_ENV === 'development') {
-  console.log('Starting Vite dev server...');
-  
-  const viteProcess = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', '5000'], {
-    cwd: path.join(__dirname, '../'),
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      VITE_ALLOWED_HOSTS: 'all'
-    }
-  });
-  
-  viteProcess.on('error', (error) => {
-    console.error('Failed to start Vite dev server:', error);
-  });
-  
-  viteProcess.on('close', (code) => {
-    console.log(`Vite dev server exited with code ${code}`);
-  });
-  
-  // Handle graceful shutdown
-  process.on('SIGTERM', () => {
-    viteProcess.kill();
-  });
-  
-  process.on('SIGINT', () => {
-    viteProcess.kill();
-  });
+  startViteServer();
 } else {
-  // In production mode, start a simple Express server
   console.log('Production mode not configured for this frontend-only application');
 }
