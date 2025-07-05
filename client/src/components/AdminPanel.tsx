@@ -1,66 +1,53 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { UserRoundCheck, Shield, Info } from "lucide-react";
-import type { User } from "@/types/schema";
+import { apiRequest } from "@/lib/queryClient";
+import type { User } from "@shared/schema";
 
 export function AdminPanel() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock users data
-  const mockUsers: User[] = [
-    {
-      id: 1,
-      username: "홍길동",
-      role: "MANAGER",
-      createdAt: new Date("2024-01-15"),
-    },
-    {
-      id: 2,
-      username: "김철수",
-      role: "ENGINEER",
-      createdAt: new Date("2024-02-10"),
-    },
-    {
-      id: 3,
-      username: "이영희",
-      role: "ENGINEER",
-      createdAt: new Date("2024-03-05"),
-    },
-  ];
+  const { data: users, isLoading } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+  });
 
-  // Load mock users on mount
-  useEffect(() => {
-    setUsers(mockUsers);
-  }, []);
-
-  const handleUpdateRole = () => {
-    if (selectedUserId && selectedRole) {
-      // Mock update role functionality
-      setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.id === selectedUserId
-            ? { ...user, role: selectedRole as "MANAGER" | "ENGINEER" }
-            : user
-        )
-      );
-      
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/role`, { role });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "권한 변경 완료",
         description: "사용자 권한이 성공적으로 변경되었습니다.",
       });
-      
       setSelectedUserId(null);
       setSelectedRole("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "권한 변경 실패",
+        description: error.message || "권한 변경 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateRole = () => {
+    if (selectedUserId && selectedRole) {
+      updateRoleMutation.mutate({ userId: selectedUserId, role: selectedRole });
     }
   };
 
@@ -83,9 +70,16 @@ export function AdminPanel() {
           </Alert>
 
           {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-gray-600 mt-2">로딩 중...</p>
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-[200px]" />
+                    <Skeleton className="h-4 w-[100px]" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <Table>
@@ -139,7 +133,7 @@ export function AdminPanel() {
                           disabled={
                             selectedUserId !== user.id ||
                             !selectedRole ||
-                            isLoading
+                            updateRoleMutation.isPending
                           }
                         >
                           변경
