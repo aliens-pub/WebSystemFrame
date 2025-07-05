@@ -1,5 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
-import type { User, LoginRequest } from "@/types/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { User, LoginRequest } from "@shared/schema";
 
 interface AuthContextType {
   user: User | null;
@@ -12,49 +14,43 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("authToken")
+  );
+  const queryClient = useQueryClient();
 
-  // Load user from localStorage on mount
-  useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser");
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Failed to parse saved user:", error);
-      }
-    }
-    setIsLoading(false);
-  }, []);
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/api/auth/me"],
+    enabled: !!token,
+    retry: false,
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (data: LoginRequest) => {
+      const response = await apiRequest("POST", "/api/auth/login", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setToken(data.token);
+      localStorage.setItem("authToken", data.token);
+      queryClient.setQueryData(["/api/auth/me"], data.user);
+    },
+  });
 
   const login = async (data: LoginRequest) => {
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Create mock user
-    const mockUser: User = {
-      id: Date.now(),
-      username: data.username,
-      role: "ENGINEER", // Default role
-      createdAt: new Date(),
-    };
-    
-    // Save to localStorage
-    localStorage.setItem("currentUser", JSON.stringify(mockUser));
-    setUser(mockUser);
-    setIsLoading(false);
+    await loginMutation.mutateAsync(data);
   };
 
   const logout = () => {
-    localStorage.removeItem("currentUser");
-    setUser(null);
+    setToken(null);
+    localStorage.removeItem("authToken");
+    queryClient.clear();
   };
 
+  // Token is automatically handled by apiRequest function
+
   const value = {
-    user,
+    user: (user as User) || null,
     login,
     logout,
     isLoading,

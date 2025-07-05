@@ -1,4 +1,6 @@
 import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
@@ -10,6 +12,7 @@ import Menu2 from "@/pages/Menu2";
 import Menu3 from "@/pages/Menu3";
 import Menu4 from "@/pages/Menu4";
 import Admin from "@/pages/Admin";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -40,6 +43,7 @@ function AppContent() {
         <Route path="/menu3" component={Menu3} />
         <Route path="/menu4" component={Menu4} />
         <Route path="/admin" component={Admin} />
+        <Route path="/settings/:rest*" component={Settings} />
         <Route component={NotFound} />
       </Switch>
     </div>
@@ -48,12 +52,14 @@ function AppContent() {
 
 function App() {
   return (
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <AppContent />
-      </AuthProvider>
-    </TooltipProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <AppContent />
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
