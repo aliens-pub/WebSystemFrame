@@ -127,3 +127,14 @@ def system_stats_view(request):
     }
     
     return Response(stats)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def employee_list_view(request):
+    """모든 직원 정보를 반환합니다."""
+    try:
+        employees = Employee.objects.all()
+        serializer = EmployeeSerializer(employees, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
