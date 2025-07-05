@@ -1,43 +1,47 @@
-import { spawn } from 'child_process';
+import express from 'express';
+import { createServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log('Vite 개발 서버를 시작합니다...');
+async function startServer() {
+  const app = express();
+  
+  // Create Vite server in middleware mode with custom configuration
+  const vite = await createServer({
+    server: { 
+      middlewareMode: true,
+      hmr: {
+        port: 5001 // Use different port for HMR
+      }
+    },
+    appType: 'spa',
+    root: path.join(__dirname, '../client'),
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '../client/src'),
+        '@shared': path.resolve(__dirname, '../shared'),
+        '@assets': path.resolve(__dirname, '../attached_assets'),
+      },
+    },
+    // Override server configuration to allow all hosts
+    configFile: false, // Don't use vite.config.ts
+    plugins: [
+      (await import('@vitejs/plugin-react')).default()
+    ]
+  });
 
-// Run vite directly from the root directory with proper configuration
-const viteProcess = spawn('npx', [
-  'vite', 
-  '--config', 
-  path.join(__dirname, '../vite.config.ts'),
-  '--host', 
-  '0.0.0.0', 
-  '--port', 
-  '5000'
-], {
-  cwd: path.join(__dirname, '../'),
-  stdio: 'inherit',
-  env: {
-    ...process.env,
-    NODE_ENV: 'development'
-  }
-});
+  // Use vite's connect instance as middleware
+  app.use(vite.middlewares);
 
-viteProcess.on('error', (error) => {
-  console.error('Vite 서버 시작 실패:', error);
-});
+  const PORT = process.env.PORT || 5000;
+  
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`한국어 웹 애플리케이션이 http://0.0.0.0:${PORT} 에서 실행 중입니다`);
+    console.log(`모든 호스트 연결이 허용됩니다`);
+  });
+}
 
-viteProcess.on('close', (code) => {
-  console.log(`Vite 서버가 코드 ${code}로 종료되었습니다`);
-});
-
-// 우아한 종료 처리
-process.on('SIGTERM', () => {
-  viteProcess.kill();
-});
-
-process.on('SIGINT', () => {
-  viteProcess.kill();
-});
+startServer().catch(console.error);
