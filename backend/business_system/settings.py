@@ -83,7 +83,8 @@ WSGI_APPLICATION = 'business_system.wsgi.application'
 import pymysql
 pymysql.install_as_MySQLdb()
 
-DATABASES = {
+# MySQL 설정 (새로운 가상환경에서 사용)
+MYSQL_DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME', 'business_system'),
@@ -96,6 +97,16 @@ DATABASES = {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
     }
+}
+
+# 현재 Replit 환경에서는 기존 PostgreSQL 사용
+import dj_database_url
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgresql://postgres:@localhost:5432/business_system'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
