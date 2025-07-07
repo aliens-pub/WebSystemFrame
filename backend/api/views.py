@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
-from .models import Employee
-from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer
+from .models import Employee, EmpInfo
+from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -135,6 +135,17 @@ def employee_list_view(request):
     try:
         employees = Employee.objects.all()
         serializer = EmployeeSerializer(employees, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def emp_info_list_view(request):
+    """모든 직원 정보(emp_info)를 반환합니다."""
+    try:
+        emp_infos = EmpInfo.objects.all().order_by('emp_id')
+        serializer = EmpInfoSerializer(emp_infos, many=True)
         return Response(serializer.data)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
