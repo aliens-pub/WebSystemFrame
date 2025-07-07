@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee
+from .models import Employee, EmpInfo
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,3 +27,9 @@ class SystemStatsSerializer(serializers.Serializer):
     total_users = serializers.IntegerField()
     active_sessions = serializers.IntegerField()
     system_status = serializers.CharField()
+
+class EmpInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmpInfo
+        fields = ['id', 'name', 'department', 'emp_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
