@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Calendar, Hash } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, Users, Hash } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 interface EmpInfo {
   id: number;
@@ -15,6 +16,8 @@ interface EmpInfo {
 }
 
 export default function Menu2() {
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  
   const { data: empInfos, isLoading, error } = useQuery<EmpInfo[]>({
     queryKey: ['/api/emp-info'],
     queryFn: async () => {
@@ -26,13 +29,24 @@ export default function Menu2() {
     },
   });
 
+  // 부서별 직원 수 계산
+  const departmentStats = empInfos?.reduce((acc, emp) => {
+    acc[emp.department] = (acc[emp.department] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+
+  // 선택된 부서의 직원들 필터링
+  const filteredEmployees = selectedDepartment 
+    ? empInfos?.filter(emp => emp.department === selectedDepartment) || []
+    : [];
+
   if (error) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">직원 정보</h1>
           <p className="text-gray-600 text-sm mt-1">
-            직원들의 기본 정보를 조회할 수 있습니다.
+            부서별로 직원 정보를 조회할 수 있습니다.
           </p>
         </div>
         <Card>
@@ -51,82 +65,102 @@ export default function Menu2() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">직원 정보</h1>
         <p className="text-gray-600 text-sm mt-1">
-          직원들의 기본 정보를 조회할 수 있습니다.
+          부서별로 직원 정보를 조회할 수 있습니다.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5" />
-            직원 목록
-            {empInfos && (
-              <Badge variant="secondary" className="ml-2">
-                총 {empInfos.length}명
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px]">
-                    <div className="flex items-center">
-                      <Hash className="mr-2 h-4 w-4" />
-                      사번
-                    </div>
-                  </TableHead>
-                  <TableHead>이름</TableHead>
-                  <TableHead>부서</TableHead>
-                  <TableHead>
-                    <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      등록일
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {empInfos?.map((empInfo) => (
-                  <TableRow key={empInfo.id}>
-                    <TableCell className="font-mono text-sm">
-                      {empInfo.emp_id}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {empInfo.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {empInfo.department}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(empInfo.created_at).toLocaleDateString('ko-KR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
-                      })}
-                    </TableCell>
-                  </TableRow>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 왼쪽 박스 - 부서 목록 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Building2 className="mr-2 h-5 w-5" />
+              부서 목록
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(departmentStats).map(([department, count]) => (
+                  <Button
+                    key={department}
+                    variant={selectedDepartment === department ? "default" : "outline"}
+                    className="w-full justify-between h-12"
+                    onClick={() => setSelectedDepartment(department)}
+                  >
+                    <span className="font-medium">{department}</span>
+                    <Badge variant="secondary">
+                      {count}명
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 오른쪽 박스 - 선택된 부서의 직원 목록 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="mr-2 h-5 w-5" />
+              {selectedDepartment ? `${selectedDepartment} 직원 목록` : '직원 목록'}
+              {selectedDepartment && (
+                <Badge variant="secondary" className="ml-2">
+                  {filteredEmployees.length}명
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : !selectedDepartment ? (
+              <div className="text-center py-12">
+                <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-gray-500">
+                  왼쪽에서 부서를 선택하면 해당 부서의 직원 목록이 표시됩니다.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredEmployees.map((emp) => (
+                  <div
+                    key={emp.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{emp.name}</p>
+                        <p className="text-sm text-gray-500 flex items-center">
+                          <Hash className="h-3 w-3 mr-1" />
+                          {emp.emp_id}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline">
+                      {emp.department}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }
