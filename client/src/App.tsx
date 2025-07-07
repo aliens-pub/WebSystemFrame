@@ -13,6 +13,9 @@ import Menu3 from "@/pages/Menu3";
 import Menu4 from "@/pages/Menu4";
 import Admin from "@/pages/Admin";
 import Settings from "@/pages/Settings";
+import RequestForms from "@/pages/settings/RequestForms";
+import ApprovalPaths from "@/pages/settings/ApprovalPaths";
+import Permissions from "@/pages/settings/Permissions";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -43,7 +46,10 @@ function AppContent() {
         <Route path="/menu3" component={Menu3} />
         <Route path="/menu4" component={Menu4} />
         <Route path="/admin" component={Admin} />
-        <Route path="/settings/:rest*" component={Settings} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/settings/request-forms" component={RequestForms} />
+        <Route path="/settings/approval-paths" component={ApprovalPaths} />
+        <Route path="/settings/permissions" component={Permissions} />
         <Route component={NotFound} />
       </Switch>
     </div>
