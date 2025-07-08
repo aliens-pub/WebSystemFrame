@@ -32,6 +32,10 @@ def login_view(request):
         request.session['employee_username'] = employee.username
         request.session['employee_role'] = employee.role
         
+        # Force session save and set expiry
+        request.session.set_expiry(86400 * 7)  # 7 days
+        request.session.save()
+        
         # Return employee data with mock token
         return Response({
             'user': EmployeeSerializer(employee).data,

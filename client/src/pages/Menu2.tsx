@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, Hash } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Building2, Users, Hash, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -17,6 +18,7 @@ interface EmpInfo {
 
 export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
   
   const { data: empInfos, isLoading, error } = useQuery<EmpInfo[]>({
     queryKey: ['/api/emp-info'],
@@ -34,6 +36,11 @@ export default function Menu2() {
     acc[emp.department] = (acc[emp.department] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
+
+  // 검색 키워드로 부서 목록 필터링
+  const filteredDepartments = Object.keys(departmentStats).filter(department =>
+    department.toLowerCase().includes(searchKeyword.toLowerCase())
+  );
 
   // 선택된 부서의 직원들 필터링
   const filteredEmployees = selectedDepartment 
@@ -79,6 +86,17 @@ export default function Menu2() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* 검색창 */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="부서명을 검색하세요..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
             {isLoading ? (
               <div className="space-y-3">
                 {[...Array(6)].map((_, i) => (
@@ -87,19 +105,25 @@ export default function Menu2() {
               </div>
             ) : (
               <div className="space-y-2">
-                {Object.entries(departmentStats).map(([department, count]) => (
-                  <Button
-                    key={department}
-                    variant={selectedDepartment === department ? "default" : "outline"}
-                    className="w-full justify-between h-12"
-                    onClick={() => setSelectedDepartment(department)}
-                  >
-                    <span className="font-medium">{department}</span>
-                    <Badge variant="secondary">
-                      {count}명
-                    </Badge>
-                  </Button>
-                ))}
+                {filteredDepartments.length > 0 ? (
+                  filteredDepartments.map((department) => (
+                    <Button
+                      key={department}
+                      variant={selectedDepartment === department ? "default" : "outline"}
+                      className="w-full justify-between h-12"
+                      onClick={() => setSelectedDepartment(department)}
+                    >
+                      <span className="font-medium">{department}</span>
+                      <Badge variant="secondary">
+                        {departmentStats[department]}명
+                      </Badge>
+                    </Button>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    검색 결과가 없습니다.
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
