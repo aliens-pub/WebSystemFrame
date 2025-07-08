@@ -118,6 +118,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
+- July 8, 2025: 세션 타임아웃 문제 해결 - Django 세션 설정 최적화 (7일 유지, 요청마다 갱신), 프론트엔드 세션 상태 자동 확인 및 만료 시 자동 로그아웃 구현
 - July 7, 2025: 설정 페이지 모듈화 완료 - Settings.tsx에서 의뢰 양식 설정, 결재 경로 설정, 권한 설정을 별도 파일로 분리하여 유지보수성 향상, 독립적인 라우팅 구조 구현
 - July 7, 2025: 직원 정보 시스템 구현 완료 - PostgreSQL emp_info 테이블 생성, Django DRF API 엔드포인트 구현, Menu2에서 부서별 직원 조회 기능 추가 (20명 예시 데이터 포함)
 - July 4, 2025: 프록시 서버 및 로그인 오류 해결 완료 - Django URL 패턴 수정, CSRF 비활성화, 요청 본문 파싱 추가로 로그인 API 정상 작동, admin.system 특별 관리자 계정 추가 (MANAGER 권한 자동 부여)

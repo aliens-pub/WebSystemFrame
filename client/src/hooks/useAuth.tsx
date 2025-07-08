@@ -19,11 +19,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/me"],
     enabled: !!token,
     retry: false,
+    refetchInterval: 60000, // 1분마다 세션 상태 확인
+    refetchOnWindowFocus: true,
+    staleTime: 30000, // 30초 후 데이터를 stale로 간주
   });
+
+  // 세션이 만료되었을 때 자동으로 로그아웃
+  useEffect(() => {
+    if (error && token) {
+      console.log("Session expired, logging out");
+      logout();
+    }
+  }, [error, token]);
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
