@@ -23,10 +23,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/auth/me"],
     enabled: !!token,
     retry: false,
-    refetchInterval: 300000, // 5분마다 세션 상태 확인 (기존 1분에서 변경)
-    refetchOnWindowFocus: true,
-    staleTime: 240000, // 4분 후 데이터를 stale로 간주
-    refetchIntervalInBackground: false, // 백그라운드에서는 refetch 안함
+    refetchOnWindowFocus: true, // 창 포커스 시에만 확인
+    staleTime: Infinity, // 데이터를 stale로 간주하지 않음
+    gcTime: Infinity, // 가비지 컬렉션 안함
   });
 
   // 세션이 만료되었을 때 자동으로 로그아웃

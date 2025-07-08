@@ -180,9 +180,10 @@ APPEND_SLASH = False
 
 # Session settings
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_COOKIE_AGE = 86400 * 7  # 7 days in seconds
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_AGE = 86400 * 30  # 30 days in seconds (더 길게 설정)
+SESSION_SAVE_EVERY_REQUEST = False  # False로 변경 (성능 향상)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_NAME = 'business_sessionid'  # 고유한 세션 쿠키 이름
