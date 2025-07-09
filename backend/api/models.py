@@ -35,3 +35,21 @@ class EmpInfo(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.emp_id}) - {self.department}"
+
+class EmailTemplate(models.Model):
+    department = models.CharField(max_length=100, unique=True, verbose_name="부서명")
+    subject = models.CharField(max_length=200, verbose_name="이메일 제목")
+    content = models.TextField(verbose_name="이메일 내용")
+    auto_send = models.BooleanField(default=False, verbose_name="자동 발송")
+    require_approval = models.BooleanField(default=False, verbose_name="승인 필요")
+    cc_manager = models.BooleanField(default=False, verbose_name="매니저 참조")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'email_template'
+        verbose_name = "이메일 템플릿"
+        verbose_name_plural = "이메일 템플릿"
+    
+    def __str__(self):
+        return f"{self.department} - {self.subject}"

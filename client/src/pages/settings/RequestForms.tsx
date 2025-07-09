@@ -7,8 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Save, Building2, Users, Search, Mail } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmpInfo {
   id: number;
@@ -19,11 +20,29 @@ interface EmpInfo {
   updated_at: string;
 }
 
+interface EmailTemplate {
+  id: number;
+  department: string;
+  subject: string;
+  content: string;
+  auto_send: boolean;
+  require_approval: boolean;
+  cc_manager: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function RequestForms() {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [emailTemplate, setEmailTemplate] = useState<string>("");
   const [emailSubject, setEmailSubject] = useState<string>("");
+  const [autoSend, setAutoSend] = useState<boolean>(false);
+  const [requireApproval, setRequireApproval] = useState<boolean>(false);
+  const [ccManager, setCcManager] = useState<boolean>(false);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: empInfos, isLoading, error } = useQuery<EmpInfo[]>({
     queryKey: ['/api/emp-info'],
@@ -33,6 +52,64 @@ export default function RequestForms() {
         throw new Error('직원 정보를 불러오는데 실패했습니다.');
       }
       return response.json();
+    },
+  });
+
+  // 특정 부서의 이메일 템플릿 조회
+  const { data: currentTemplate, isLoading: isTemplateLoading } = useQuery<EmailTemplate>({
+    queryKey: ['/api/email-templates', selectedDepartment],
+    queryFn: async () => {
+      const response = await fetch(`/api/email-templates/${selectedDepartment}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('템플릿을 불러오는데 실패했습니다.');
+      }
+      return response.json();
+    },
+    enabled: !!selectedDepartment,
+  });
+
+  // 이메일 템플릿 저장 mutation
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (templateData: {
+      department: string;
+      subject: string;
+      content: string;
+      auto_send: boolean;
+      require_approval: boolean;
+      cc_manager: boolean;
+    }) => {
+      const response = await fetch(`/api/email-templates/${templateData.department}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(templateData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('템플릿 저장에 실패했습니다.');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "저장 완료",
+        description: `${selectedDepartment} 템플릿이 성공적으로 저장되었습니다.`,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/email-templates', selectedDepartment],
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "저장 실패",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -47,55 +124,9 @@ export default function RequestForms() {
     department.toLowerCase().includes(searchKeyword.toLowerCase())
   );
 
-  // 선택된 부서에 따른 기본 이메일 템플릿 설정
-  const getDefaultEmailTemplate = (department: string | null) => {
-    if (!department) return "";
-    
-    const templates: Record<string, { subject: string; content: string }> = {
-      "개발팀": {
-        subject: "[개발팀] 업무 의뢰서",
-        content: `안녕하세요, 개발팀입니다.
-
-아래와 같이 업무를 의뢰드립니다.
-
-■ 의뢰 내용: 
-■ 요청 기한: 
-■ 우선순위: 
-■ 참고사항: 
-
-감사합니다.`
-      },
-      "마케팅팀": {
-        subject: "[마케팅팀] 업무 의뢰서",
-        content: `안녕하세요, 마케팅팀입니다.
-
-아래와 같이 업무를 의뢰드립니다.
-
-■ 의뢰 내용: 
-■ 타겟 고객: 
-■ 예상 기간: 
-■ 예산: 
-■ 기타 요구사항: 
-
-감사합니다.`
-      },
-      "영업팀": {
-        subject: "[영업팀] 업무 의뢰서",
-        content: `안녕하세요, 영업팀입니다.
-
-아래와 같이 업무를 의뢰드립니다.
-
-■ 의뢰 내용: 
-■ 고객사: 
-■ 예상 매출: 
-■ 마감일: 
-■ 추가 정보: 
-
-감사합니다.`
-      }
-    };
-
-    return templates[department] || {
+  // 기본 템플릿 생성 함수
+  const getDefaultEmailTemplate = (department: string) => {
+    return {
       subject: `[${department}] 업무 의뢰서`,
       content: `안녕하세요, ${department}입니다.
 
@@ -110,12 +141,42 @@ export default function RequestForms() {
     };
   };
 
-  // 부서 선택 시 기본 템플릿 설정
+  // 부서 선택 시 템플릿 로드
   const handleDepartmentSelect = (department: string) => {
     setSelectedDepartment(department);
-    const template = getDefaultEmailTemplate(department);
-    setEmailSubject(template.subject);
-    setEmailTemplate(template.content);
+  };
+
+  // 현재 템플릿 데이터가 변경될 때 폼 상태 업데이트
+  useEffect(() => {
+    if (currentTemplate) {
+      setEmailSubject(currentTemplate.subject);
+      setEmailTemplate(currentTemplate.content);
+      setAutoSend(currentTemplate.auto_send);
+      setRequireApproval(currentTemplate.require_approval);
+      setCcManager(currentTemplate.cc_manager);
+    } else if (selectedDepartment) {
+      // 새로운 템플릿의 경우 기본값 설정
+      const defaultTemplate = getDefaultEmailTemplate(selectedDepartment);
+      setEmailSubject(defaultTemplate.subject);
+      setEmailTemplate(defaultTemplate.content);
+      setAutoSend(false);
+      setRequireApproval(false);
+      setCcManager(false);
+    }
+  }, [currentTemplate, selectedDepartment]);
+
+  // 템플릿 저장 핸들러
+  const handleSaveTemplate = () => {
+    if (!selectedDepartment) return;
+    
+    saveTemplateMutation.mutate({
+      department: selectedDepartment,
+      subject: emailSubject,
+      content: emailTemplate,
+      auto_send: autoSend,
+      require_approval: requireApproval,
+      cc_manager: ccManager,
+    });
   };
 
   return (
@@ -211,47 +272,76 @@ export default function RequestForms() {
                 </div>
               ) : (
                 <>
-                  <div>
-                    <Label htmlFor="email-subject">이메일 제목</Label>
-                    <Input 
-                      id="email-subject" 
-                      value={emailSubject}
-                      onChange={(e) => setEmailSubject(e.target.value)}
-                      placeholder="이메일 제목을 입력하세요"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="email-template">이메일 템플릿</Label>
-                    <Textarea 
-                      id="email-template" 
-                      value={emailTemplate}
-                      onChange={(e) => setEmailTemplate(e.target.value)}
-                      placeholder="이메일 템플릿을 입력하세요"
-                      className="min-h-[300px]"
-                    />
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <Label>템플릿 설정</Label>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="auto-send" />
-                      <Label htmlFor="auto-send">자동 발송</Label>
+                  {isTemplateLoading ? (
+                    <div className="space-y-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-32 w-full" />
+                      <Skeleton className="h-20 w-full" />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="require-approval" />
-                      <Label htmlFor="require-approval">승인 필요</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="cc-manager" />
-                      <Label htmlFor="cc-manager">매니저 참조</Label>
-                    </div>
-                  </div>
-                  
-                  <Button className="w-full">
-                    <Save className="mr-2 h-4 w-4" />
-                    {selectedDepartment} 템플릿 저장
-                  </Button>
+                  ) : (
+                    <>
+                      <div>
+                        <Label htmlFor="email-subject">이메일 제목</Label>
+                        <Input 
+                          id="email-subject" 
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          placeholder="이메일 제목을 입력하세요"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="email-template">이메일 템플릿</Label>
+                        <Textarea 
+                          id="email-template" 
+                          value={emailTemplate}
+                          onChange={(e) => setEmailTemplate(e.target.value)}
+                          placeholder="이메일 템플릿을 입력하세요"
+                          className="min-h-[300px]"
+                        />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <Label>템플릿 설정</Label>
+                        <div className="flex items-center space-x-2">
+                          <Switch 
+                            id="auto-send" 
+                            checked={autoSend}
+                            onCheckedChange={setAutoSend}
+                          />
+                          <Label htmlFor="auto-send">자동 발송</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch 
+                            id="require-approval" 
+                            checked={requireApproval}
+                            onCheckedChange={setRequireApproval}
+                          />
+                          <Label htmlFor="require-approval">승인 필요</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch 
+                            id="cc-manager" 
+                            checked={ccManager}
+                            onCheckedChange={setCcManager}
+                          />
+                          <Label htmlFor="cc-manager">매니저 참조</Label>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        className="w-full" 
+                        onClick={handleSaveTemplate}
+                        disabled={saveTemplateMutation.isPending}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {saveTemplateMutation.isPending 
+                          ? "저장 중..." 
+                          : `${selectedDepartment} 템플릿 저장`
+                        }
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </CardContent>
