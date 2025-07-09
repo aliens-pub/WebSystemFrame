@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
-from .models import Employee, EmpInfo
-from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer
+from .models import Employee, EmpInfo, EmailTemplate
+from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -153,3 +153,60 @@ def emp_info_list_view(request):
         return Response(serializer.data)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def email_template_list_view(request):
+    """이메일 템플릿 목록 조회 및 생성"""
+    if request.method == 'GET':
+        try:
+            templates = EmailTemplate.objects.all().order_by('department')
+            serializer = EmailTemplateSerializer(templates, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+    
+    elif request.method == 'POST':
+        try:
+            serializer = EmailTemplateSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([AllowAny])
+def email_template_detail_view(request, department):
+    """특정 부서의 이메일 템플릿 조회, 수정, 삭제"""
+    try:
+        template = EmailTemplate.objects.get(department=department)
+    except EmailTemplate.DoesNotExist:
+        if request.method == 'GET':
+            return Response({'error': '해당 부서의 템플릿이 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        # PUT 요청 시 새로 생성
+        template = None
+    
+    if request.method == 'GET':
+        serializer = EmailTemplateSerializer(template)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        if template:
+            # 기존 템플릿 업데이트
+            serializer = EmailTemplateSerializer(template, data=request.data)
+        else:
+            # 새 템플릿 생성
+            serializer = EmailTemplateSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        if template:
+            template.delete()
+            return Response({'message': '템플릿이 삭제되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'error': '해당 부서의 템플릿이 없습니다.'}, status=status.HTTP_404_NOT_FOUND)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, EmpInfo
+from .models import Employee, EmpInfo, EmailTemplate
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,4 +32,10 @@ class EmpInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmpInfo
         fields = ['id', 'name', 'department', 'emp_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class EmailTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailTemplate
+        fields = ['id', 'department', 'subject', 'content', 'auto_send', 'require_approval', 'cc_manager', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
