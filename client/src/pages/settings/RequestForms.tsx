@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Save, Building2, Users, Search, Mail } from "lucide-react";
@@ -37,9 +37,7 @@ export default function RequestForms() {
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [emailTemplate, setEmailTemplate] = useState<string>("");
   const [emailSubject, setEmailSubject] = useState<string>("");
-  const [autoSend, setAutoSend] = useState<boolean>(false);
-  const [requireApproval, setRequireApproval] = useState<boolean>(false);
-  const [ccManager, setCcManager] = useState<boolean>(false);
+
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -77,9 +75,6 @@ export default function RequestForms() {
       department: string;
       subject: string;
       content: string;
-      auto_send: boolean;
-      require_approval: boolean;
-      cc_manager: boolean;
     }) => {
       const response = await fetch(`/api/email-templates/${templateData.department}`, {
         method: 'PUT',
@@ -151,17 +146,11 @@ export default function RequestForms() {
     if (currentTemplate) {
       setEmailSubject(currentTemplate.subject);
       setEmailTemplate(currentTemplate.content);
-      setAutoSend(currentTemplate.auto_send);
-      setRequireApproval(currentTemplate.require_approval);
-      setCcManager(currentTemplate.cc_manager);
     } else if (selectedDepartment) {
       // 새로운 템플릿의 경우 기본값 설정
       const defaultTemplate = getDefaultEmailTemplate(selectedDepartment);
       setEmailSubject(defaultTemplate.subject);
       setEmailTemplate(defaultTemplate.content);
-      setAutoSend(false);
-      setRequireApproval(false);
-      setCcManager(false);
     }
   }, [currentTemplate, selectedDepartment]);
 
@@ -173,9 +162,6 @@ export default function RequestForms() {
       department: selectedDepartment,
       subject: emailSubject,
       content: emailTemplate,
-      auto_send: autoSend,
-      require_approval: requireApproval,
-      cc_manager: ccManager,
     });
   };
 
@@ -301,33 +287,7 @@ export default function RequestForms() {
                         />
                       </div>
                       
-                      <div className="space-y-3">
-                        <Label>템플릿 설정</Label>
-                        <div className="flex items-center space-x-2">
-                          <Switch 
-                            id="auto-send" 
-                            checked={autoSend}
-                            onCheckedChange={setAutoSend}
-                          />
-                          <Label htmlFor="auto-send">자동 발송</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch 
-                            id="require-approval" 
-                            checked={requireApproval}
-                            onCheckedChange={setRequireApproval}
-                          />
-                          <Label htmlFor="require-approval">승인 필요</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch 
-                            id="cc-manager" 
-                            checked={ccManager}
-                            onCheckedChange={setCcManager}
-                          />
-                          <Label htmlFor="cc-manager">매니저 참조</Label>
-                        </div>
-                      </div>
+
                       
                       <Button 
                         className="w-full" 
