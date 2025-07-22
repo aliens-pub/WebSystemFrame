@@ -53,3 +53,20 @@ class EmailTemplate(models.Model):
     
     def __str__(self):
         return f"{self.department} - {self.subject}"
+
+class RequestSubmission(models.Model):
+    department = models.CharField(max_length=100, verbose_name="부서")
+    content = models.TextField(verbose_name="의뢰 내용")
+    submitted_by = models.CharField(max_length=100, verbose_name="상신자")
+    submitted_at = models.DateTimeField(auto_now_add=True, verbose_name="상신 시간")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'request_submissions'
+        verbose_name = '의뢰 상신'
+        verbose_name_plural = '의뢰 상신'
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"{self.department} - {self.submitted_by} ({self.submitted_at.strftime('%Y-%m-%d %H:%M')})"
