@@ -35,6 +35,7 @@ interface EmailTemplate {
 
 export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
 
@@ -78,6 +79,7 @@ export default function Menu2() {
   const submitRequestMutation = useMutation({
     mutationFn: async (requestData: {
       department: string;
+      title: string;
       content: string;
       submitted_by: string;
     }) => {
@@ -102,6 +104,7 @@ export default function Menu2() {
         description: `${selectedDepartment}에 의뢰가 성공적으로 상신되었습니다.`,
       });
       // 폼 초기화
+      setRequestTitle("");
       setRequestContent("");
       setSelectedDepartment("");
     },
@@ -149,6 +152,15 @@ export default function Menu2() {
       return;
     }
 
+    if (!requestTitle.trim()) {
+      toast({
+        title: "제목 입력 필요",
+        description: "의뢰 제목을 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!requestContent.trim()) {
       toast({
         title: "내용 입력 필요",
@@ -169,6 +181,7 @@ export default function Menu2() {
 
     submitRequestMutation.mutate({
       department: selectedDepartment,
+      title: requestTitle,
       content: requestContent,
       submitted_by: user.username,
     });
@@ -262,6 +275,21 @@ export default function Menu2() {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* 의뢰 제목 */}
+            {selectedDepartment && (
+              <div>
+                <Label htmlFor="request-title">의뢰 제목</Label>
+                <input
+                  id="request-title"
+                  type="text"
+                  value={requestTitle}
+                  onChange={(e) => setRequestTitle(e.target.value)}
+                  placeholder="의뢰 제목을 입력하세요"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            )}
 
             {/* 의뢰 내용 */}
             {selectedDepartment && (

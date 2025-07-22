@@ -9,6 +9,7 @@ import { useState } from "react";
 interface RequestSubmission {
   id: number;
   department: string;
+  title: string;
   content: string;
   submitted_by: string;
   submitted_at: string;
@@ -119,7 +120,10 @@ export default function Menu1() {
                   </div>
                   
                   <div className="mb-2">
-                    <p className="text-gray-800 text-sm leading-relaxed">
+                    <h3 className="text-gray-900 font-medium text-base mb-2">
+                      {submission.title || "제목 없음"}
+                    </h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
                       {truncateContent(submission.content)}
                     </p>
                   </div>
