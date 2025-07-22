@@ -12,4 +12,5 @@ urlpatterns = [
     path('emp-info', views.emp_info_list_view, name='emp_info_list'),
     path('email-templates', views.email_template_list_view, name='email_template_list'),
     path('email-templates/<str:department>', views.email_template_detail_view, name='email_template_detail'),
+    path('request-submissions', views.request_submission_view, name='request_submission'),
 ]

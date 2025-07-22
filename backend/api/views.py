@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
-from .models import Employee, EmpInfo, EmailTemplate
-from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer
+from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission
+from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -210,3 +210,16 @@ def email_template_detail_view(request, department):
             template.delete()
             return Response({'message': '템플릿이 삭제되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': '해당 부서의 템플릿이 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_submission_view(request):
+    """의뢰 상신 처리"""
+    try:
+        serializer = RequestSubmissionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
