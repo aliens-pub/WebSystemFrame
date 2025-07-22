@@ -8,6 +8,7 @@ import { Send, FileText, Users } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EmpInfo {
   id: number;
@@ -33,16 +34,18 @@ interface EmailTemplate {
 export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<string>("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
 
   // 부서 목록 조회 (기존 직원 정보에서 부서 추출)
   const { data: empInfos, isLoading: isDepartmentLoading, error } = useQuery<EmpInfo[]>({
     queryKey: ['/api/emp-info'],
     queryFn: async () => {
-      const response = await fetch('/api/emp-info');
+      const response = await fetch('/api/emp-info', {
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error('부서 정보를 불러오는데 실패했습니다.');
       }
@@ -54,7 +57,9 @@ export default function Menu2() {
   const { data: emailTemplate, isLoading: isTemplateLoading } = useQuery<EmailTemplate>({
     queryKey: ['/api/email-templates', selectedDepartment],
     queryFn: async () => {
-      const response = await fetch(`/api/email-templates/${selectedDepartment}`);
+      const response = await fetch(`/api/email-templates/${selectedDepartment}`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         if (response.status === 404) {
           return null;
@@ -78,6 +83,7 @@ export default function Menu2() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 세션 쿠키 포함
         body: JSON.stringify(requestData),
       });
       
@@ -129,22 +135,6 @@ export default function Menu2() {
     }
   }, [emailTemplate, selectedDepartment]);
 
-  // 현재 사용자 정보 가져오기
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const response = await fetch('/api/auth/me');
-        if (response.ok) {
-          const userData = await response.json();
-          setCurrentUser(userData.username);
-        }
-      } catch (error) {
-        console.error('사용자 정보 조회 실패:', error);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
-
   // 의뢰 상신 처리
   const handleSubmitRequest = () => {
     if (!selectedDepartment) {
@@ -165,10 +155,10 @@ export default function Menu2() {
       return;
     }
 
-    if (!currentUser) {
+    if (!isAuthenticated || !user) {
       toast({
-        title: "사용자 정보 없음",
-        description: "로그인 정보를 확인할 수 없습니다.",
+        title: "로그인 필요",
+        description: "로그인 후 이용해주세요.",
         variant: "destructive",
       });
       return;
@@ -177,7 +167,7 @@ export default function Menu2() {
     submitRequestMutation.mutate({
       department: selectedDepartment,
       content: requestContent,
-      submitted_by: currentUser,
+      submitted_by: user.username,
     });
   };
 
@@ -267,13 +257,13 @@ export default function Menu2() {
             )}
 
             {/* 상신자 정보 */}
-            {currentUser && (
+            {isAuthenticated && user && (
               <div>
                 <Label>상신자</Label>
                 <div className="p-3 bg-gray-50 rounded-md border">
                   <div className="flex items-center">
                     <Users className="h-4 w-4 text-gray-500 mr-2" />
-                    <span className="font-medium">{currentUser}</span>
+                    <span className="font-medium">{user.username}</span>
                   </div>
                 </div>
               </div>
