@@ -122,35 +122,32 @@ export default function Menu1() {
                 return (
                   <div key={submission.id} className="border rounded-lg hover:bg-gray-50 transition-colors">
                     <div 
-                      className="p-4 cursor-pointer"
+                      className="px-3 py-2 cursor-pointer"
                       onClick={() => toggleExpanded(submission.id)}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline">{submission.department}</Badge>
-                          <span className="text-sm text-gray-500">#{submission.id}</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <Badge variant="outline" className="text-xs">{submission.department}</Badge>
+                          <span className="text-xs text-gray-500">#{submission.id}</span>
+                          <h3 className="text-gray-900 font-medium text-sm truncate flex-1">
+                            {submission.title || "제목 없음"}
+                          </h3>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center text-sm text-gray-500">
-                            <Calendar className="mr-1 h-4 w-4" />
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Calendar className="mr-1 h-3 w-3" />
                             {formatDate(submission.submitted_at)}
                           </div>
                           {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400" />
+                            <ChevronUp className="h-3 w-3 text-gray-400" />
                           ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                            <ChevronDown className="h-3 w-3 text-gray-400" />
                           )}
                         </div>
                       </div>
                       
-                      <div className="mb-1">
-                        <h3 className="text-gray-900 font-medium text-base">
-                          {submission.title || "제목 없음"}
-                        </h3>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-gray-500">
-                        <User className="mr-1 h-4 w-4" />
+                      <div className="flex items-center text-xs text-gray-500">
+                        <User className="mr-1 h-3 w-3" />
                         {submission.submitted_by}
                       </div>
                     </div>
