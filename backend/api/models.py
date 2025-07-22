@@ -56,6 +56,7 @@ class EmailTemplate(models.Model):
 
 class RequestSubmission(models.Model):
     department = models.CharField(max_length=100, verbose_name="부서")
+    title = models.CharField(max_length=200, verbose_name="의뢰 제목", default="")
     content = models.TextField(verbose_name="의뢰 내용")
     submitted_by = models.CharField(max_length=100, verbose_name="상신자")
     submitted_at = models.DateTimeField(auto_now_add=True, verbose_name="상신 시간")

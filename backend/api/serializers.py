@@ -43,5 +43,5 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
 class RequestSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RequestSubmission
-        fields = ['id', 'department', 'content', 'submitted_by', 'submitted_at', 'created_at', 'updated_at']
+        fields = ['id', 'department', 'title', 'content', 'submitted_by', 'submitted_at', 'created_at', 'updated_at']
         read_only_fields = ['id', 'submitted_at', 'created_at', 'updated_at']
