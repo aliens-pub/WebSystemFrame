@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Calendar, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Calendar, User, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -25,6 +25,7 @@ interface RequestSubmissionResponse {
 
 export default function Menu1() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const pageSize = 10;
 
   // 의뢰 상신 목록 조회
@@ -53,6 +54,16 @@ export default function Menu1() {
   const truncateContent = (content: string, maxLength: number = 100) => {
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
+  };
+
+  const toggleExpanded = (submissionId: number) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(submissionId)) {
+      newExpanded.delete(submissionId);
+    } else {
+      newExpanded.add(submissionId);
+    }
+    setExpandedItems(newExpanded);
   };
 
   return (
@@ -106,34 +117,54 @@ export default function Menu1() {
             </div>
           ) : (
             <div className="space-y-4">
-              {submissionsData?.results.map((submission) => (
-                <div key={submission.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{submission.department}</Badge>
-                      <span className="text-sm text-gray-500">#{submission.id}</span>
+              {submissionsData?.results.map((submission) => {
+                const isExpanded = expandedItems.has(submission.id);
+                return (
+                  <div key={submission.id} className="border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div 
+                      className="p-4 cursor-pointer"
+                      onClick={() => toggleExpanded(submission.id)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline">{submission.department}</Badge>
+                          <span className="text-sm text-gray-500">#{submission.id}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Calendar className="mr-1 h-4 w-4" />
+                            {formatDate(submission.submitted_at)}
+                          </div>
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="mb-2">
+                        <h3 className="text-gray-900 font-medium text-base mb-1">
+                          {submission.title || "제목 없음"}
+                        </h3>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-500">
+                        <User className="mr-1 h-4 w-4" />
+                        상신자: {submission.submitted_by}
+                      </div>
                     </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Calendar className="mr-1 h-4 w-4" />
-                      {formatDate(submission.submitted_at)}
-                    </div>
+                    
+                    {isExpanded && (
+                      <div className="border-t bg-gray-50 p-4">
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {submission.content}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="mb-2">
-                    <h3 className="text-gray-900 font-medium text-base mb-2">
-                      {submission.title || "제목 없음"}
-                    </h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {truncateContent(submission.content)}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <User className="mr-1 h-4 w-4" />
-                    상신자: {submission.submitted_by}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               
               {/* 페이지네이션 */}
               {submissionsData && submissionsData.total_pages > 1 && (
