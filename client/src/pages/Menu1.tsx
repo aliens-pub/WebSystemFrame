@@ -130,11 +130,7 @@ export default function Menu1() {
                           <Badge variant="outline">{submission.department}</Badge>
                           <span className="text-sm text-gray-500">#{submission.id}</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center text-sm text-gray-500">
-                            <Calendar className="mr-1 h-4 w-4" />
-                            {formatDate(submission.submitted_at)}
-                          </div>
+                        <div className="flex items-center">
                           {isExpanded ? (
                             <ChevronUp className="h-4 w-4 text-gray-400" />
                           ) : (
@@ -143,15 +139,21 @@ export default function Menu1() {
                         </div>
                       </div>
                       
-                      <div className="mb-2">
-                        <h3 className="text-gray-900 font-medium text-base mb-1">
+                      <div className="mb-1">
+                        <h3 className="text-gray-900 font-medium text-base">
                           {submission.title || "제목 없음"}
                         </h3>
                       </div>
                       
-                      <div className="flex items-center text-sm text-gray-500">
-                        <User className="mr-1 h-4 w-4" />
-                        상신자: {submission.submitted_by}
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <Calendar className="mr-1 h-4 w-4" />
+                          {formatDate(submission.submitted_at)}
+                        </div>
+                        <div className="flex items-center">
+                          <User className="mr-1 h-4 w-4" />
+                          {submission.submitted_by}
+                        </div>
                       </div>
                     </div>
                     
