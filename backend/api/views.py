@@ -211,15 +211,45 @@ def email_template_detail_view(request, department):
             return Response({'message': '템플릿이 삭제되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': '해당 부서의 템플릿이 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def request_submission_view(request):
-    """의뢰 상신 처리"""
-    try:
-        serializer = RequestSubmissionSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    """의뢰 상신 목록 조회 및 처리"""
+    if request.method == 'GET':
+        try:
+            # 페이지네이션 파라미터
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            
+            # 최신순으로 정렬하여 페이지네이션
+            submissions = RequestSubmission.objects.all().order_by('-submitted_at')
+            
+            # 페이지네이션 계산
+            total_count = submissions.count()
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            
+            page_submissions = submissions[start_index:end_index]
+            
+            serializer = RequestSubmissionSerializer(page_submissions, many=True)
+            
+            return Response({
+                'results': serializer.data,
+                'total_count': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_count + page_size - 1) // page_size
+            })
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            serializer = RequestSubmissionSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
