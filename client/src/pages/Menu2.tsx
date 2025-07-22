@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, FileText, Users } from "lucide-react";
+import { Send, FileText, Users, Check, ChevronsUpDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +36,7 @@ interface EmailTemplate {
 export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
+  const [open, setOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -212,24 +215,52 @@ export default function Menu2() {
             {/* 부서 선택 */}
             <div>
               <Label htmlFor="department-select">의뢰 부서</Label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="의뢰할 부서를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isDepartmentLoading ? (
-                    <div className="p-2 text-center text-sm text-gray-500">
-                      부서 목록을 불러오는 중...
-                    </div>
-                  ) : (
-                    departments.map((department) => (
-                      <SelectItem key={department} value={department}>
-                        {department}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {selectedDepartment
+                      ? departments.find((department) => department === selectedDepartment)
+                      : "의뢰할 부서를 검색하거나 선택하세요"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput placeholder="부서명 검색..." />
+                    <CommandEmpty>해당하는 부서가 없습니다.</CommandEmpty>
+                    <CommandGroup>
+                      {isDepartmentLoading ? (
+                        <div className="p-2 text-center text-sm text-gray-500">
+                          부서 목록을 불러오는 중...
+                        </div>
+                      ) : (
+                        departments.map((department) => (
+                          <CommandItem
+                            key={department}
+                            value={department}
+                            onSelect={(currentValue) => {
+                              setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
+                              setOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                selectedDepartment === department ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {department}
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* 의뢰 내용 */}
