@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
-from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission
-from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer
+from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, ApprovalRole
+from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer, ApprovalRoleSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -305,6 +305,80 @@ def update_employee_roles_view(request):
         return Response({
             'message': f'{len(updated_employees)}명의 권한이 업데이트되었습니다.',
             'updated_employees': updated_employees
+        })
+        
+    except Employee.DoesNotExist:
+        return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def approval_roles_view(request):
+    """결재 역할 저장"""
+    try:
+        # 로그인 확인
+        employee_id = request.session.get('employee_id')
+        if not employee_id:
+            print(f"No employee_id in session: {dict(request.session)}")
+            return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # 현재 사용자 권한 확인 (MANAGER만 결재 역할 설정 가능)
+        current_employee = Employee.objects.get(id=employee_id)
+        if current_employee.role != 'MANAGER':
+            return Response({'error': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        updates = request.data.get('updates', [])
+        if not updates:
+            return Response({'error': '업데이트할 데이터가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        created_roles = []
+        updated_roles = []
+        
+        for update in updates:
+            employee_id_to_update = update.get('employee_id')
+            role = update.get('role')
+            department = update.get('department')
+            
+            if not all([employee_id_to_update, role, department]):
+                continue
+                
+            if role not in ['결재', '병렬결재', '합의', '통보']:
+                continue
+            
+            try:
+                # EmpInfo에서 직원 정보 가져오기
+                emp_info = EmpInfo.objects.get(id=employee_id_to_update)
+                
+                # 기존 역할이 있는지 확인
+                approval_role, created = ApprovalRole.objects.update_or_create(
+                    employee_id=employee_id_to_update,
+                    department=department,
+                    defaults={
+                        'employee_name': emp_info.name,
+                        'role': role
+                    }
+                )
+                
+                role_data = {
+                    'employee_id': approval_role.employee_id,
+                    'employee_name': approval_role.employee_name,
+                    'department': approval_role.department,
+                    'role': approval_role.role
+                }
+                
+                if created:
+                    created_roles.append(role_data)
+                else:
+                    updated_roles.append(role_data)
+                    
+            except EmpInfo.DoesNotExist:
+                continue
+        
+        return Response({
+            'message': f'{len(created_roles)}개의 새로운 역할이 생성되고, {len(updated_roles)}개의 기존 역할이 업데이트되었습니다.',
+            'created_roles': created_roles,
+            'updated_roles': updated_roles
         })
         
     except Employee.DoesNotExist:

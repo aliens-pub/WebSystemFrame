@@ -71,3 +71,28 @@ class RequestSubmission(models.Model):
 
     def __str__(self):
         return f"{self.department} - {self.submitted_by} ({self.submitted_at.strftime('%Y-%m-%d %H:%M')})"
+
+class ApprovalRole(models.Model):
+    """결재 역할 모델"""
+    ROLE_CHOICES = [
+        ('결재', '결재'),
+        ('병렬결재', '병렬결재'),
+        ('합의', '합의'),
+        ('통보', '통보'),
+    ]
+    
+    employee_id = models.IntegerField(verbose_name='직원 ID')
+    employee_name = models.CharField(max_length=100, verbose_name='직원명', blank=True)
+    department = models.CharField(max_length=100, verbose_name='부서')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, verbose_name='결재 역할')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='생성 일시')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정 일시')
+    
+    class Meta:
+        db_table = 'approval_roles'
+        verbose_name = '결재 역할'
+        verbose_name_plural = '결재 역할'
+        unique_together = ['employee_id', 'department']  # 직원당 부서별로 하나의 역할만 가능
+        
+    def __str__(self):
+        return f"{self.employee_name} ({self.department}) - {self.role}"
