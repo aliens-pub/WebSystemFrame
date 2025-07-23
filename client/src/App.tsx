@@ -9,7 +9,6 @@ import { Header } from "@/components/Header";
 import Dashboard from "@/pages/Dashboard";
 import Menu1 from "@/pages/Menu1";
 import Menu2 from "@/pages/Menu2";
-import Menu3 from "@/pages/Menu3";
 import Menu4 from "@/pages/Menu4";
 import Admin from "@/pages/Admin";
 import Settings from "@/pages/Settings";
@@ -43,7 +42,6 @@ function AppContent() {
         <Route path="/" component={Dashboard} />
         <Route path="/menu1" component={Menu1} />
         <Route path="/menu2" component={Menu2} />
-        <Route path="/menu3" component={Menu3} />
         <Route path="/menu4" component={Menu4} />
         <Route path="/admin" component={Admin} />
         <Route path="/settings" component={Settings} />
