@@ -41,18 +41,33 @@ setTimeout(() => {
       console.log('Proxying request:', req.originalUrl, 'to', targetUrl);
       console.log('Request body:', req.body);
       
+      // Forward all headers including cookies
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      // Forward authorization and cookie headers
+      if (req.headers.authorization) {
+        headers['Authorization'] = req.headers.authorization;
+      }
+      if (req.headers.cookie) {
+        headers['Cookie'] = req.headers.cookie;
+      }
+      
       const response = await fetch(targetUrl, {
         method: req.method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers,
         body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
       });
       
       const data = await response.text();
       res.status(response.status);
-      res.set(Object.fromEntries(response.headers.entries()));
+      
+      // Forward response headers including set-cookie
+      const responseHeaders = Object.fromEntries(response.headers.entries());
+      res.set(responseHeaders);
+      
       res.send(data);
     } catch (error) {
       console.error('Proxy error:', error);
