@@ -7,6 +7,7 @@ import { Users, AlertCircle, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Employee {
   id: number;
@@ -30,19 +31,7 @@ export default function Permissions() {
   // 권한 업데이트 mutation
   const updatePermissionsMutation = useMutation({
     mutationFn: async (updates: { employee_id: number; role: string }[]) => {
-      const response = await fetch('/api/employees/update-roles', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ updates }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('권한 업데이트에 실패했습니다.');
-      }
-      
+      const response = await apiRequest('PATCH', '/api/employees/update-roles', { updates });
       return response.json();
     },
     onSuccess: () => {
