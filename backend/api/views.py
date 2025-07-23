@@ -253,3 +253,56 @@ def request_submission_view(request):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PATCH'])
+@permission_classes([AllowAny])
+def update_employee_roles_view(request):
+    """직원 권한 일괄 업데이트"""
+    try:
+        # 로그인 확인
+        employee_id = request.session.get('employee_id')
+        if not employee_id:
+            return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # 현재 사용자 권한 확인 (MANAGER만 권한 수정 가능)
+        current_employee = Employee.objects.get(id=employee_id)
+        if current_employee.role != 'MANAGER':
+            return Response({'error': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        updates = request.data.get('updates', [])
+        if not updates:
+            return Response({'error': '업데이트할 데이터가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        updated_employees = []
+        
+        for update in updates:
+            employee_id_to_update = update.get('employee_id')
+            new_role = update.get('role')
+            
+            if not employee_id_to_update or not new_role:
+                continue
+                
+            if new_role not in ['ENGINEER', 'MANAGER']:
+                continue
+                
+            try:
+                employee = Employee.objects.get(id=employee_id_to_update)
+                employee.role = new_role
+                employee.save()
+                updated_employees.append({
+                    'id': employee.id,
+                    'username': employee.username,
+                    'role': employee.role
+                })
+            except Employee.DoesNotExist:
+                continue
+        
+        return Response({
+            'message': f'{len(updated_employees)}명의 권한이 업데이트되었습니다.',
+            'updated_employees': updated_employees
+        })
+        
+    except Employee.DoesNotExist:
+        return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
