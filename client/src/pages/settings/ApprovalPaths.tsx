@@ -4,9 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, Hash, Search } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Building2, Users, Hash, Search, Save } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface EmpInfo {
   id: number;
@@ -20,6 +22,8 @@ interface EmpInfo {
 type ApprovalRole = "결재" | "병렬결재" | "합의" | "통보";
 
 export default function ApprovalPaths() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
     null,
   );
@@ -62,6 +66,33 @@ export default function ApprovalPaths() {
     ? empInfos?.filter((emp) => emp.department === selectedDepartment) || []
     : [];
 
+  // 결재 역할 저장 mutation
+  const saveApprovalRolesMutation = useMutation({
+    mutationFn: async (data: { department: string; roles: Record<number, ApprovalRole> }) => {
+      const roleUpdates = Object.entries(data.roles).map(([empId, role]) => ({
+        employee_id: parseInt(empId),
+        role: role,
+        department: data.department
+      }));
+      
+      const response = await apiRequest('POST', '/api/approval-roles', { updates: roleUpdates });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "저장 완료",
+        description: "결재 역할이 성공적으로 저장되었습니다.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "저장 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // 직원별 결재 역할 변경 핸들러
   const handleRoleChange = (empId: number, role: ApprovalRole) => {
     setEmployeeRoles(prev => ({
@@ -69,6 +100,38 @@ export default function ApprovalPaths() {
       [empId]: role
     }));
   };
+
+  // 저장 버튼 핸들러
+  const handleSaveRoles = () => {
+    if (!selectedDepartment) {
+      toast({
+        title: "부서 선택 필요",
+        description: "먼저 부서를 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedRoles = Object.fromEntries(
+      Object.entries(employeeRoles).filter(([, role]) => role)
+    );
+
+    if (Object.keys(selectedRoles).length === 0) {
+      toast({
+        title: "역할 선택 필요",
+        description: "최소 한 명 이상의 직원에게 역할을 할당해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    saveApprovalRolesMutation.mutate({
+      department: selectedDepartment,
+      roles: selectedRoles
+    });
+  };
+
+  const hasRoleChanges = Object.keys(employeeRoles).some(empId => employeeRoles[parseInt(empId)]);
 
   if (error) {
     return (
@@ -161,17 +224,29 @@ export default function ApprovalPaths() {
         {/* 오른쪽 박스 - 선택된 부서의 직원 목록 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              {selectedDepartment
-                ? `${selectedDepartment} 직원 목록`
-                : "직원 목록"}
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <Users className="mr-2 h-5 w-5" />
+                {selectedDepartment
+                  ? `${selectedDepartment} 직원 목록`
+                  : "직원 목록"}
+                {selectedDepartment && (
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredEmployees.length}명
+                  </Badge>
+                )}
+              </CardTitle>
               {selectedDepartment && (
-                <Badge variant="secondary" className="ml-2">
-                  {filteredEmployees.length}명
-                </Badge>
+                <Button 
+                  onClick={handleSaveRoles}
+                  disabled={!hasRoleChanges || saveApprovalRolesMutation.isPending}
+                  size="sm"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saveApprovalRolesMutation.isPending ? "저장 중..." : "저장"}
+                </Button>
               )}
-            </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
