@@ -1,9 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, AlertCircle, RefreshCw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, AlertCircle, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 interface Employee {
   id: number;
@@ -14,10 +17,49 @@ interface Employee {
 }
 
 export default function Permissions() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [roleChanges, setRoleChanges] = useState<Record<number, string>>({});
+  
   const { data: employees, isLoading, error, refetch } = useQuery<Employee[]>({
     queryKey: ['/api/employees'],
     retry: 3,
     retryDelay: 1000,
+  });
+
+  // 권한 업데이트 mutation
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async (updates: { employee_id: number; role: string }[]) => {
+      const response = await fetch('/api/employees/update-roles', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('권한 업데이트에 실패했습니다.');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "권한 업데이트 완료",
+        description: "사용자 권한이 성공적으로 업데이트되었습니다.",
+      });
+      setRoleChanges({});
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "권한 업데이트 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const formatDateTime = (dateString: string) => {
@@ -33,6 +75,37 @@ export default function Permissions() {
   const getRoleBadgeVariant = (role: string) => {
     return role === 'MANAGER' ? 'default' : 'secondary';
   };
+
+  const handleRoleChange = (employeeId: number, newRole: string) => {
+    setRoleChanges(prev => ({
+      ...prev,
+      [employeeId]: newRole
+    }));
+  };
+
+  const handleSaveChanges = () => {
+    const updates = Object.entries(roleChanges).map(([employeeId, role]) => ({
+      employee_id: parseInt(employeeId),
+      role: role
+    }));
+
+    if (updates.length === 0) {
+      toast({
+        title: "변경사항 없음",
+        description: "저장할 변경사항이 없습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updatePermissionsMutation.mutate(updates);
+  };
+
+  const getCurrentRole = (employee: Employee) => {
+    return roleChanges[employee.id] || employee.role;
+  };
+
+  const hasChanges = Object.keys(roleChanges).length > 0;
 
   if (isLoading) {
     return (
@@ -74,10 +147,20 @@ export default function Permissions() {
             전체 직원 정보를 조회할 수 있습니다.
           </p>
         </div>
-        <Button onClick={() => refetch()} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          새로고침
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={() => refetch()} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            새로고침
+          </Button>
+          <Button 
+            onClick={handleSaveChanges}
+            disabled={!hasChanges || updatePermissionsMutation.isPending}
+            size="sm"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {updatePermissionsMutation.isPending ? "저장 중..." : "저장"}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -106,9 +189,25 @@ export default function Permissions() {
                       <TableCell className="font-medium">{employee.id}</TableCell>
                       <TableCell>{employee.username}</TableCell>
                       <TableCell>
-                        <Badge variant={getRoleBadgeVariant(employee.role)}>
-                          {employee.role === 'MANAGER' ? '관리자' : '엔지니어'}
-                        </Badge>
+                        <div className="flex items-center space-x-2">
+                          <Select
+                            value={getCurrentRole(employee)}
+                            onValueChange={(value) => handleRoleChange(employee.id, value)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ENGINEER">엔지니어</SelectItem>
+                              <SelectItem value="MANAGER">관리자</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {roleChanges[employee.id] && (
+                            <Badge variant="outline" className="text-xs">
+                              변경됨
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">
                         {formatDateTime(employee.created_at)}
