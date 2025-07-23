@@ -259,9 +259,14 @@ def request_submission_view(request):
 def update_employee_roles_view(request):
     """직원 권한 일괄 업데이트"""
     try:
+        # 세션 디버깅
+        print(f"Session data: {dict(request.session)}")
+        print(f"Session key: {request.session.session_key}")
+        
         # 로그인 확인
         employee_id = request.session.get('employee_id')
         if not employee_id:
+            print(f"No employee_id in session: {dict(request.session)}")
             return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         # 현재 사용자 권한 확인 (MANAGER만 권한 수정 가능)
