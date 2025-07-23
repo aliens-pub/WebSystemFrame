@@ -14,7 +14,6 @@ export function Header() {
   const menuItems = [
     { name: "메뉴1", path: "/menu1" },
     { name: "메뉴2", path: "/menu2" },
-    { name: "메뉴3", path: "/menu3" },
   ];
 
   const settingsMenuItems = [
