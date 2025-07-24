@@ -82,6 +82,7 @@ class ApprovalRole(models.Model):
     ]
     
     employee_id = models.IntegerField(unique=True, verbose_name='직원 ID')
+    employee_name = models.CharField(max_length=100, verbose_name='직원명', blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, verbose_name='결재 역할')
     
     class Meta:
@@ -90,4 +91,4 @@ class ApprovalRole(models.Model):
         verbose_name_plural = '결재 역할'
         
     def __str__(self):
-        return f"직원 ID {self.employee_id} - {self.role}"
+        return f"{self.employee_name} ({self.employee_id}) - {self.role}"

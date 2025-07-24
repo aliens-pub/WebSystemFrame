@@ -347,18 +347,20 @@ def approval_roles_view(request):
             
             try:
                 # EmpInfo에서 직원이 존재하는지 확인
-                EmpInfo.objects.get(id=employee_id_to_update)
+                emp_info = EmpInfo.objects.get(id=employee_id_to_update)
                 
                 # 기존 역할이 있는지 확인
                 approval_role, created = ApprovalRole.objects.update_or_create(
                     employee_id=employee_id_to_update,
                     defaults={
+                        'employee_name': emp_info.name,
                         'role': role
                     }
                 )
                 
                 role_data = {
                     'employee_id': approval_role.employee_id,
+                    'employee_name': approval_role.employee_name,
                     'role': approval_role.role
                 }
                 
