@@ -1,8 +1,4 @@
 from django.db import models
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from django.db.models.manager import Manager
 
 class Employee(models.Model):
     ROLE_CHOICES = [
@@ -19,10 +15,6 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    if TYPE_CHECKING:
-        objects: Manager
-        DoesNotExist: type[Exception]
-    
     class Meta:
         db_table = 'employee'
     
@@ -36,10 +28,6 @@ class EmpInfo(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    if TYPE_CHECKING:
-        objects: Manager
-        DoesNotExist: type[Exception]
-    
     class Meta:
         db_table = 'emp_info'
         verbose_name = "직원 정보"
@@ -52,15 +40,11 @@ class EmailTemplate(models.Model):
     department = models.CharField(max_length=100, unique=True, verbose_name="부서명")
     subject = models.CharField(max_length=200, verbose_name="이메일 제목")
     content = models.TextField(verbose_name="이메일 내용")
-    auto_send = models.BooleanField(verbose_name="자동 발송")
-    require_approval = models.BooleanField(verbose_name="승인 필요")
-    cc_manager = models.BooleanField(verbose_name="매니저 참조")
+    auto_send = models.BooleanField(default=False, verbose_name="자동 발송")
+    require_approval = models.BooleanField(default=False, verbose_name="승인 필요")
+    cc_manager = models.BooleanField(default=False, verbose_name="매니저 참조")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    if TYPE_CHECKING:
-        objects: Manager
-        DoesNotExist: type[Exception]
     
     class Meta:
         db_table = 'email_template'
@@ -79,10 +63,6 @@ class RequestSubmission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    if TYPE_CHECKING:
-        objects: Manager
-        DoesNotExist: type[Exception]
-
     class Meta:
         db_table = 'request_submissions'
         verbose_name = '의뢰 상신'
@@ -90,30 +70,4 @@ class RequestSubmission(models.Model):
         ordering = ['-submitted_at']
 
     def __str__(self):
-        # Use format() method instead of strftime for better type safety
-        return f"{self.department} - {self.submitted_by} ({self.submitted_at:%Y-%m-%d %H:%M})"
-
-class ApprovalRole(models.Model):
-    """결재 역할 모델"""
-    ROLE_CHOICES = [
-        ('결재', '결재'),
-        ('병렬결재', '병렬결재'),
-        ('합의', '합의'),
-        ('통보', '통보'),
-    ]
-    
-    emp_id = models.IntegerField(unique=True, verbose_name='직원 ID')
-    name = models.CharField(max_length=100, verbose_name='직원명', blank=True)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, verbose_name='결재 역할')
-    
-    if TYPE_CHECKING:
-        objects: Manager
-        DoesNotExist: type[Exception]
-    
-    class Meta:
-        db_table = 'approval_roles'
-        verbose_name = '결재 역할'
-        verbose_name_plural = '결재 역할'
-        
-    def __str__(self):
-        return f"{self.name} ({self.emp_id}) - {self.role}"
+        return f"{self.department} - {self.submitted_by} ({self.submitted_at.strftime('%Y-%m-%d %H:%M')})"

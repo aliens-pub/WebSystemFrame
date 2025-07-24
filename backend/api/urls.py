@@ -14,5 +14,4 @@ urlpatterns = [
     path('email-templates/<str:department>', views.email_template_detail_view, name='email_template_detail'),
     path('request-submissions', views.request_submission_view, name='request_submission'),
     path('employees/update-roles', views.update_employee_roles_view, name='update_employee_roles'),
-    path('approval-roles', views.approval_roles_view, name='approval_roles'),
 ]

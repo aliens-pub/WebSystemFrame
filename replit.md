@@ -118,7 +118,6 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
-- July 24, 2025: Django backend LSP 진단 오류 완전 해결 - 33개 LSP 오류를 0개로 감소, Django ORM 타입 힌트 추가, Manager 및 DoesNotExist 타입 정의, BooleanField 기본값 수정, validated_data 안전한 접근 패턴 적용, 코드 품질 및 개발자 경험 대폭 향상
 - July 22, 2025: 의뢰 상신 목록 조회 시스템 완료 - Menu1에서 상신된 request_submissions를 페이지네이션으로 목록 조회, 최신순 정렬, 한 페이지당 10개 항목 표시, 부서별 배지와 상신자 정보 표시, 검색 가능한 부서 선택 드롭다운 추가
 - July 22, 2025: 의뢰 상신 페이지 검색 기능 강화 - Menu2 부서 선택에 Command 컴포넌트 기반 실시간 검색 기능 추가, Popover와 키보드 네비게이션 지원, 체크 아이콘으로 선택 상태 표시
 - July 9, 2025: 부서별 이메일 템플릿 데이터베이스 연동 완료 - EmailTemplate 모델 추가, API 엔드포인트 구현, 프론트엔드에서 템플릿 저장/로드 기능 구현, 하드코딩 제거하고 실제 데이터베이스 연동으로 변경
