@@ -315,17 +315,19 @@ def update_employee_roles_view(request):
 @api_view(['GET', 'PUT'])
 @permission_classes([AllowAny])
 def approval_roles_view(request):
-    """부서별 직원 결재 역할 조회 및 저장"""
+    """직원 결재 역할 조회 및 저장"""
     if request.method == 'GET':
         try:
             department = request.GET.get('department')
             if not department:
-                return Response({'error': '부서를 지정해주세요.'}, status=status.HTTP_400_BAD_REQUEST)
+                # 모든 결재 역할 조회
+                approval_roles = EmpApprovalRole.objects.all()
+            else:
+                # 해당 부서의 직원들 중 결재 역할이 설정된 직원들 조회
+                dept_emp_ids = EmpInfo.objects.filter(department=department).values_list('emp_id', flat=True)
+                approval_roles = EmpApprovalRole.objects.filter(emp_id__in=dept_emp_ids)
             
-            # 해당 부서의 결재 역할 조회
-            approval_roles = EmpApprovalRole.objects.filter(department=department)
             serializer = EmpApprovalRoleSerializer(approval_roles, many=True)
-            
             return Response(serializer.data)
             
         except Exception as e:
@@ -343,11 +345,7 @@ def approval_roles_view(request):
             if current_employee.role != 'MANAGER':
                 return Response({'error': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
             
-            department = request.data.get('department')
             roles = request.data.get('roles', {})
-            
-            if not department:
-                return Response({'error': '부서를 지정해주세요.'}, status=status.HTTP_400_BAD_REQUEST)
             
             if not roles:
                 return Response({'error': '역할 데이터가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -366,7 +364,6 @@ def approval_roles_view(request):
                     # 기존 역할이 있으면 업데이트, 없으면 생성
                     approval_role, created = EmpApprovalRole.objects.update_or_create(
                         emp_id=emp_id,
-                        department=department,
                         defaults={
                             'name': emp_info.name,
                             'role': role
