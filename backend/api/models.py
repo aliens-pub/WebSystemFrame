@@ -71,3 +71,28 @@ class RequestSubmission(models.Model):
 
     def __str__(self):
         return f"{self.department} - {self.submitted_by} ({self.submitted_at.strftime('%Y-%m-%d %H:%M')})"
+
+class EmpApprovalRole(models.Model):
+    ROLE_CHOICES = [
+        ('결재', '결재'),
+        ('병렬결재', '병렬결재'),
+        ('합의', '합의'),
+        ('병렬합의', '병렬합의'),
+        ('통보', '통보'),
+    ]
+    
+    name = models.CharField(max_length=100, verbose_name="직원 이름")
+    emp_id = models.CharField(max_length=20, verbose_name="사번")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, verbose_name="결재 역할")
+    department = models.CharField(max_length=100, verbose_name="부서")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'emp_approval_role'
+        verbose_name = '직원 결재 역할'
+        verbose_name_plural = '직원 결재 역할'
+        unique_together = ['emp_id', 'department']
+    
+    def __str__(self):
+        return f"{self.name} ({self.emp_id}) - {self.role}"

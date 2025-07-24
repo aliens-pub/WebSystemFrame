@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
-from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission
-from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer
+from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole
+from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer, EmpApprovalRoleSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -311,3 +311,84 @@ def update_employee_roles_view(request):
         return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([AllowAny])
+def approval_roles_view(request):
+    """부서별 직원 결재 역할 조회 및 저장"""
+    if request.method == 'GET':
+        try:
+            department = request.GET.get('department')
+            if not department:
+                return Response({'error': '부서를 지정해주세요.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 해당 부서의 결재 역할 조회
+            approval_roles = EmpApprovalRole.objects.filter(department=department)
+            serializer = EmpApprovalRoleSerializer(approval_roles, many=True)
+            
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'PUT':
+        try:
+            # 로그인 확인
+            employee_id = request.session.get('employee_id')
+            if not employee_id:
+                return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # 현재 사용자 권한 확인 (MANAGER만 결재 역할 설정 가능)
+            current_employee = Employee.objects.get(id=employee_id)
+            if current_employee.role != 'MANAGER':
+                return Response({'error': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
+            
+            department = request.data.get('department')
+            roles = request.data.get('roles', {})
+            
+            if not department:
+                return Response({'error': '부서를 지정해주세요.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not roles:
+                return Response({'error': '역할 데이터가 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            updated_roles = []
+            
+            # 각 직원의 역할을 저장/업데이트
+            for emp_id, role in roles.items():
+                if not role:  # 역할이 선택되지 않은 경우 건너뜀
+                    continue
+                    
+                try:
+                    # emp_info에서 직원 정보 가져오기
+                    emp_info = EmpInfo.objects.get(emp_id=emp_id)
+                    
+                    # 기존 역할이 있으면 업데이트, 없으면 생성
+                    approval_role, created = EmpApprovalRole.objects.update_or_create(
+                        emp_id=emp_id,
+                        department=department,
+                        defaults={
+                            'name': emp_info.name,
+                            'role': role
+                        }
+                    )
+                    
+                    updated_roles.append({
+                        'emp_id': approval_role.emp_id,
+                        'name': approval_role.name,
+                        'role': approval_role.role,
+                        'created': created
+                    })
+                    
+                except EmpInfo.DoesNotExist:
+                    continue
+            
+            return Response({
+                'message': f'{len(updated_roles)}명의 결재 역할이 저장되었습니다.',
+                'updated_roles': updated_roles
+            })
+            
+        except Employee.DoesNotExist:
+            return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
