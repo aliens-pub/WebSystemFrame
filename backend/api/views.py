@@ -3,15 +3,18 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
+from django.http import HttpRequest
+from rest_framework.request import Request
+from typing import Any, Dict, Union
 from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, ApprovalRole
 from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer, ApprovalRoleSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def login_view(request):
+def login_view(request: Request) -> Response:
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        username = serializer.validated_data['username']
+        username: str = serializer.validated_data.get('username', '')  # type: ignore
         
         # Special admin user gets MANAGER role (for deployment testing)
         default_role = 'MANAGER' if username == 'admin.system' else 'ENGINEER'
@@ -46,8 +49,8 @@ def login_view(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def current_user_view(request):
-    employee_id = request.session.get('employee_id')
+def current_user_view(request: Request) -> Response:
+    employee_id: Union[int, None] = request.session.get('employee_id')
     if not employee_id:
         return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
     
@@ -106,7 +109,7 @@ def update_user_role_view(request, user_id):
         
         serializer = UpdateRoleSerializer(data=request.data)
         if serializer.is_valid():
-            target_employee.role = serializer.validated_data['role']
+            target_employee.role = serializer.validated_data.get('role')  # type: ignore
             target_employee.save()
             return Response(EmployeeSerializer(target_employee).data)
         
