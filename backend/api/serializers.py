@@ -49,5 +49,5 @@ class RequestSubmissionSerializer(serializers.ModelSerializer):
 class ApprovalRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApprovalRole
-        fields = ['id', 'employee_id', 'role']
+        fields = ['id', 'employee_id', 'employee_name', 'role']
         read_only_fields = ['id']
