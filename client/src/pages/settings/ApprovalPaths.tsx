@@ -103,7 +103,12 @@ export default function ApprovalPaths() {
 
   // 저장 버튼 핸들러
   const handleSaveRoles = () => {
+    console.log('=== 저장 버튼 클릭 ===');
+    console.log('selectedDepartment:', selectedDepartment);
+    console.log('employeeRoles:', employeeRoles);
+    
     if (!selectedDepartment) {
+      console.log('부서 선택되지 않음');
       toast({
         title: "부서 선택 필요",
         description: "먼저 부서를 선택해주세요.",
@@ -115,8 +120,12 @@ export default function ApprovalPaths() {
     const selectedRoles = Object.fromEntries(
       Object.entries(employeeRoles).filter(([, role]) => role)
     );
+    
+    console.log('selectedRoles:', selectedRoles);
+    console.log('selectedRoles length:', Object.keys(selectedRoles).length);
 
     if (Object.keys(selectedRoles).length === 0) {
+      console.log('선택된 역할이 없음');
       toast({
         title: "역할 선택 필요",
         description: "최소 한 명 이상의 직원에게 역할을 할당해주세요.",
@@ -125,10 +134,13 @@ export default function ApprovalPaths() {
       return;
     }
 
-    saveApprovalRolesMutation.mutate({
+    const mutationData = {
       department: selectedDepartment,
       roles: selectedRoles
-    });
+    };
+    console.log('Mutation 데이터:', mutationData);
+    
+    saveApprovalRolesMutation.mutate(mutationData);
   };
 
   const hasRoleChanges = Object.keys(employeeRoles).some(empId => employeeRoles[parseInt(empId)]);
