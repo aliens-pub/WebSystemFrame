@@ -312,10 +312,10 @@ def update_employee_roles_view(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @permission_classes([AllowAny])
 def approval_roles_view(request):
-    """결재 역할 저장"""
+    """결재 역할 저장/업데이트"""
     try:
         # 로그인 확인
         employee_id = request.session.get('employee_id')
