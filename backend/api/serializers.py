@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, ApprovalRole
+from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,9 +45,3 @@ class RequestSubmissionSerializer(serializers.ModelSerializer):
         model = RequestSubmission
         fields = ['id', 'department', 'title', 'content', 'submitted_by', 'submitted_at', 'created_at', 'updated_at']
         read_only_fields = ['id', 'submitted_at', 'created_at', 'updated_at']
-
-class ApprovalRoleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ApprovalRole
-        fields = ['id', 'emp_id', 'name', 'role']
-        read_only_fields = ['id']
