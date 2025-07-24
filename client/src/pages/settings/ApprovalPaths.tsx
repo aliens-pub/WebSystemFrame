@@ -23,7 +23,6 @@ interface ApprovalRole {
   name: string;
   emp_id: string;
   role: string;
-  department: string;
   created_at: string;
   updated_at: string;
 }
@@ -67,7 +66,7 @@ export default function ApprovalPaths() {
 
   // 결재 역할 저장 mutation
   const saveRolesMutation = useMutation({
-    mutationFn: async (data: { department: string; roles: Record<string, string> }) => {
+    mutationFn: async (data: { roles: Record<string, string> }) => {
       const response = await fetch("/api/approval-roles", {
         method: "PUT",
         headers: {
@@ -166,7 +165,6 @@ export default function ApprovalPaths() {
     console.log("Mutation 데이터:", { roles: selectedRoles });
 
     saveRolesMutation.mutate({
-      department: selectedDepartment,
       roles: selectedRoles
     });
   };
