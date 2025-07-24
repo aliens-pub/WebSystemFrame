@@ -70,7 +70,7 @@ export default function ApprovalPaths() {
   const saveApprovalRolesMutation = useMutation({
     mutationFn: async (data: { roles: Record<number, ApprovalRole> }) => {
       const roleUpdates = Object.entries(data.roles).map(([empId, role]) => ({
-        employee_id: parseInt(empId),
+        emp_id: parseInt(empId),
         role: role
       }));
       
