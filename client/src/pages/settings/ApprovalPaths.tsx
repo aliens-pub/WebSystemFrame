@@ -75,7 +75,7 @@ export default function ApprovalPaths() {
         department: data.department
       }));
       
-      const response = await apiRequest('POST', '/api/approval-roles', { updates: roleUpdates });
+      const response = await apiRequest('PUT', '/api/approval-roles', { updates: roleUpdates });
       return response.json();
     },
     onSuccess: () => {
