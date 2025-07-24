@@ -2,9 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, Hash } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, Users, Hash, Save } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import * as React from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmpInfo {
   id: number;
@@ -15,10 +18,23 @@ interface EmpInfo {
   updated_at: string;
 }
 
+interface ApprovalRole {
+  id: number;
+  name: string;
+  emp_id: string;
+  role: string;
+  department: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const APPROVAL_ROLES = ['결재', '병렬결재', '합의', '병렬합의', '통보'] as const;
+
 export default function ApprovalPaths() {
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
-    null,
-  );
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [employeeRoles, setEmployeeRoles] = useState<Record<string, string>>({});
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     data: empInfos,
@@ -32,6 +48,51 @@ export default function ApprovalPaths() {
         throw new Error("직원 정보를 불러오는데 실패했습니다.");
       }
       return response.json();
+    },
+  });
+
+  // 선택된 부서의 기존 결재 역할 조회
+  const { data: existingRoles } = useQuery<ApprovalRole[]>({
+    queryKey: ["/api/approval-roles", selectedDepartment],
+    queryFn: async () => {
+      if (!selectedDepartment) return [];
+      const response = await fetch(`/api/approval-roles?department=${encodeURIComponent(selectedDepartment)}`);
+      if (!response.ok) {
+        throw new Error("결재 역할 정보를 불러오는데 실패했습니다.");
+      }
+      return response.json();
+    },
+    enabled: !!selectedDepartment,
+  });
+
+  // 결재 역할 저장 mutation
+  const saveRolesMutation = useMutation({
+    mutationFn: async (data: { department: string; roles: Record<string, string> }) => {
+      const response = await fetch("/api/approval-roles", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error("결재 역할 저장에 실패했습니다.");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "저장 완료",
+        description: "결재 역할이 성공적으로 저장되었습니다.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/approval-roles", selectedDepartment] });
+    },
+    onError: (error) => {
+      toast({
+        title: "저장 실패",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -49,6 +110,66 @@ export default function ApprovalPaths() {
   const filteredEmployees = selectedDepartment
     ? empInfos?.filter((emp) => emp.department === selectedDepartment) || []
     : [];
+
+  // 기존 역할을 employeeRoles 상태에 반영
+  React.useEffect(() => {
+    if (existingRoles && selectedDepartment) {
+      const roles: Record<string, string> = {};
+      existingRoles.forEach((role) => {
+        roles[role.emp_id] = role.role;
+      });
+      setEmployeeRoles(roles);
+    } else {
+      setEmployeeRoles({});
+    }
+  }, [existingRoles, selectedDepartment]);
+
+  // 역할 변경 핸들러
+  const handleRoleChange = (empId: string, role: string) => {
+    setEmployeeRoles(prev => ({
+      ...prev,
+      [empId]: role
+    }));
+  };
+
+  // 저장 핸들러
+  const handleSave = () => {
+    if (!selectedDepartment) {
+      toast({
+        title: "오류",
+        description: "부서를 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 선택된 역할만 필터링
+    const selectedRoles = Object.fromEntries(
+      Object.entries(employeeRoles).filter(([, role]) => role && role.trim() !== '')
+    );
+
+    console.log("=== 저장 버튼 클릭 ===");
+    console.log("selectedDepartment:", selectedDepartment);
+    console.log("employeeRoles:", employeeRoles);
+    console.log("selectedRoles:", selectedRoles);
+    console.log("selectedRoles length:", Object.keys(selectedRoles).length);
+
+    if (Object.keys(selectedRoles).length === 0) {
+      toast({
+        title: "오류",
+        description: "최소 한 명의 직원에게 역할을 지정해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("Mutation 데이터:", { roles: selectedRoles });
+
+    saveRolesMutation.mutate({
+      department: selectedDepartment,
+      roles: selectedRoles
+    });
+  };
 
   if (error) {
     return (
@@ -76,11 +197,23 @@ export default function ApprovalPaths() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">결재 경로 설정</h1>
-        <p className="text-gray-600 text-sm mt-1">
-          부서별로 결재 경로를 설정할 수 있습니다.
-        </p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">결재 경로 설정</h1>
+          <p className="text-gray-600 text-sm mt-1">
+            부서별로 결재 경로를 설정할 수 있습니다.
+          </p>
+        </div>
+        {selectedDepartment && (
+          <Button 
+            onClick={handleSave}
+            disabled={saveRolesMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saveRolesMutation.isPending ? "저장 중..." : "저장"}
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -162,18 +295,31 @@ export default function ApprovalPaths() {
                       <div>
                         <p className="font-medium text-gray-900">
                           {emp.name}
-                          <span className="text-sm text-gray-500 flex items-center">
-                            ({emp.id})
-                          </span>
                         </p>
-
                         <p className="text-sm text-gray-500 flex items-center">
                           <Hash className="h-3 w-3 mr-1" />
                           {emp.emp_id}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline">{emp.department}</Badge>
+                    <div className="flex items-center gap-3">
+                      <Select
+                        value={employeeRoles[emp.emp_id] || ""}
+                        onValueChange={(value) => handleRoleChange(emp.emp_id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="역할 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {APPROVAL_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Badge variant="outline">{emp.department}</Badge>
+                    </div>
                   </div>
                 ))}
               </div>
