@@ -338,32 +338,27 @@ def approval_roles_view(request):
         for update in updates:
             employee_id_to_update = update.get('employee_id')
             role = update.get('role')
-            department = update.get('department')
             
-            if not all([employee_id_to_update, role, department]):
+            if not all([employee_id_to_update, role]):
                 continue
                 
             if role not in ['결재', '병렬결재', '합의', '통보']:
                 continue
             
             try:
-                # EmpInfo에서 직원 정보 가져오기
-                emp_info = EmpInfo.objects.get(id=employee_id_to_update)
+                # EmpInfo에서 직원이 존재하는지 확인
+                EmpInfo.objects.get(id=employee_id_to_update)
                 
                 # 기존 역할이 있는지 확인
                 approval_role, created = ApprovalRole.objects.update_or_create(
                     employee_id=employee_id_to_update,
-                    department=department,
                     defaults={
-                        'employee_name': emp_info.name,
                         'role': role
                     }
                 )
                 
                 role_data = {
                     'employee_id': approval_role.employee_id,
-                    'employee_name': approval_role.employee_name,
-                    'department': approval_role.department,
                     'role': approval_role.role
                 }
                 

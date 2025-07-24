@@ -68,11 +68,10 @@ export default function ApprovalPaths() {
 
   // 결재 역할 저장 mutation
   const saveApprovalRolesMutation = useMutation({
-    mutationFn: async (data: { department: string; roles: Record<number, ApprovalRole> }) => {
+    mutationFn: async (data: { roles: Record<number, ApprovalRole> }) => {
       const roleUpdates = Object.entries(data.roles).map(([empId, role]) => ({
         employee_id: parseInt(empId),
-        role: role,
-        department: data.department
+        role: role
       }));
       
       const response = await apiRequest('PUT', '/api/approval-roles', { updates: roleUpdates });
@@ -135,7 +134,6 @@ export default function ApprovalPaths() {
     }
 
     const mutationData = {
-      department: selectedDepartment,
       roles: selectedRoles
     };
     console.log('Mutation 데이터:', mutationData);
