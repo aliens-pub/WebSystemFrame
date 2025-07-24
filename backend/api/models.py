@@ -81,18 +81,13 @@ class ApprovalRole(models.Model):
         ('통보', '통보'),
     ]
     
-    employee_id = models.IntegerField(verbose_name='직원 ID')
-    employee_name = models.CharField(max_length=100, verbose_name='직원명', blank=True)
-    department = models.CharField(max_length=100, verbose_name='부서')
+    employee_id = models.IntegerField(unique=True, verbose_name='직원 ID')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, verbose_name='결재 역할')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='생성 일시')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정 일시')
     
     class Meta:
         db_table = 'approval_roles'
         verbose_name = '결재 역할'
         verbose_name_plural = '결재 역할'
-        unique_together = ['employee_id', 'department']  # 직원당 부서별로 하나의 역할만 가능
         
     def __str__(self):
-        return f"{self.employee_name} ({self.department}) - {self.role}"
+        return f"직원 ID {self.employee_id} - {self.role}"
