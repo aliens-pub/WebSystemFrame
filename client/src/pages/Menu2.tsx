@@ -234,7 +234,7 @@ export default function Menu2() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-1/3 justify-between"
+                    className="w-2/5 justify-between"
                   >
                     {selectedDepartment
                       ? departments.find((department) => department === selectedDepartment)
