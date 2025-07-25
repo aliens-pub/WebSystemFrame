@@ -234,7 +234,7 @@ export default function Menu2() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between"
+                    className="w-1/3 justify-between"
                   >
                     {selectedDepartment
                       ? departments.find((department) => department === selectedDepartment)
@@ -246,30 +246,39 @@ export default function Menu2() {
                   <Command>
                     <CommandInput placeholder="부서명 검색..." />
                     <CommandEmpty>해당하는 부서가 없습니다.</CommandEmpty>
-                    <CommandGroup>
+                    <CommandGroup className="max-h-64 overflow-hidden relative">
                       {isDepartmentLoading ? (
                         <div className="p-2 text-center text-sm text-gray-500">
                           부서 목록을 불러오는 중...
                         </div>
                       ) : (
-                        departments.map((department) => (
-                          <CommandItem
-                            key={department}
-                            value={department}
-                            onSelect={(currentValue) => {
-                              setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
-                              setOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={`mr-2 h-4 w-4 ${
-                                selectedDepartment === department ? "opacity-100" : "opacity-0"
+                        <div className="max-h-60 overflow-y-auto">
+                          {departments.map((department, index) => (
+                            <CommandItem
+                              key={department}
+                              value={department}
+                              onSelect={(currentValue) => {
+                                setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
+                                setOpen(false);
+                              }}
+                              className={`${
+                                index >= 9 ? 'opacity-60' : ''
+                              } ${
+                                index >= 10 ? 'opacity-30' : ''
                               }`}
-                            />
-                            {department}
-                          </CommandItem>
-                        ))
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedDepartment === department ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {department}
+                            </CommandItem>
+                          ))}
+                        </div>
                       )}
+                      {/* Scroll hint gradient overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
                     </CommandGroup>
                   </Command>
                 </PopoverContent>
