@@ -79,15 +79,20 @@ export function Header() {
                   </div>
                   
                   {isSettingsHovered && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-md shadow-lg border border-gray-200 py-2 z-50">
                       {settingsMenuItems.map((item) => (
                         <Link key={item.name} href={item.path}>
-                          <div className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                          <div className="px-6 py-3 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
                             {item.name}
                           </div>
                         </Link>
                       ))}
                     </div>
+                  )}
+                  {/* Extended hover area */}
+                  <div className="absolute -top-2 -bottom-2 -left-4 -right-4 pointer-events-none" />
+                  {isSettingsHovered && (
+                    <div className="absolute top-full left-0 w-52 h-2 bg-transparent" />
                   )}
                 </div>
               ) : (
@@ -171,15 +176,20 @@ export function Header() {
                 </div>
                 
                 {isSettingsHovered && (
-                  <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-md shadow-lg border border-gray-200 py-2 z-50">
                     {settingsMenuItems.map((item) => (
                       <Link key={item.name} href={item.path}>
-                        <div className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                        <div className="px-6 py-3 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
                           {item.name}
                         </div>
                       </Link>
                     ))}
                   </div>
+                )}
+                {/* Extended hover area */}
+                <div className="absolute -top-2 -bottom-2 -left-4 -right-4 pointer-events-none" />
+                {isSettingsHovered && (
+                  <div className="absolute top-full left-0 w-52 h-2 bg-transparent" />
                 )}
               </div>
             ) : (
