@@ -47,18 +47,8 @@ def login_view(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def current_user_view(request):
-    # 세션 디버깅 추가
-    print(f"=== current_user_view 세션 디버깅 ===")
-    print(f"Session data: {dict(request.session)}")
-    print(f"Session key: {request.session.session_key}")
-    print(f"Session modified: {request.session.modified}")
-    print(f"Session accessed: {request.session.accessed}")
-    
     employee_id = request.session.get('employee_id')
-    print(f"employee_id from session: {employee_id}")
-    
     if not employee_id:
-        print(f"No employee_id found in session: {dict(request.session)}")
         return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
     
     try:
@@ -66,7 +56,6 @@ def current_user_view(request):
         serializer = EmployeeSerializer(employee)
         return Response(serializer.data)
     except Employee.DoesNotExist:
-        print(f"Employee with id {employee_id} not found")
         return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
