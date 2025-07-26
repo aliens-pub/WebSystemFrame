@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-
+import { LoginModal } from "@/components/LoginModal";
 import { Header } from "@/components/Header";
 import Dashboard from "@/pages/Dashboard";
 import Menu1 from "@/pages/Menu1";
@@ -18,6 +18,23 @@ import Permissions from "@/pages/settings/Permissions";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginModal />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />

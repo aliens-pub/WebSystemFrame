@@ -2,12 +2,12 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Box, Lock, UserRoundCheck, Settings, ChevronDown } from "lucide-react";
+import { LogOut, Box, Lock, UserRoundCheck, Settings, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
 export function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isSettingsHovered, setIsSettingsHovered] = useState(false);
 
@@ -126,6 +126,16 @@ export function Header() {
                 </AvatarFallback>
               </Avatar>
             </div>
+
+            {/* Logout Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
