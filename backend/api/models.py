@@ -8,7 +8,7 @@ class Employee(models.Model):
     
     username = models.CharField(max_length=150, unique=True)
     employee_number = models.CharField(max_length=20, unique=True, verbose_name="사번")
-    role = models.CharField(
+    auth = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
         default='ENGINEER'
