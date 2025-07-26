@@ -46,7 +46,7 @@ export function LoginModal() {
               시스템 로그인
             </h2>
             <p className="text-gray-600 text-sm">
-              이름을 입력하여 시스템에 접속하세요
+              사번을 입력하여 시스템에 접속하세요
             </p>
           </div>
 
@@ -64,10 +64,10 @@ export function LoginModal() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>이름</FormLabel>
+                    <FormLabel>사번</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="이름을 입력하세요"
+                        placeholder="사번을 입력하세요 (예: EMP0000001)"
                         {...field}
                         disabled={isLoading}
                       />

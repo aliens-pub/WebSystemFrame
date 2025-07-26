@@ -11,26 +11,39 @@ from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializ
 def login_view(request):
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        username = serializer.validated_data['username']
+        employee_number = serializer.validated_data['username']  # username field now contains employee_number
         
         # Special admin user gets MANAGER role (for deployment testing)
-        default_role = 'MANAGER' if username == 'admin.system' else 'ENGINEER'
+        default_role = 'MANAGER' if employee_number == 'EMP9999999' else 'ENGINEER'
         
-        # Get or create employee
-        employee, created = Employee.objects.get_or_create(
-            username=username,
-            defaults={'role': default_role}
-        )
-        
-        # If admin.system user already exists but not MANAGER, update role
-        if username == 'admin.system' and employee.role != 'MANAGER':
-            employee.role = 'MANAGER'
-            employee.save()
+        # Try to find existing employee by employee_number
+        try:
+            employee = Employee.objects.get(employee_number=employee_number)
+            # If admin user already exists but not MANAGER, update role
+            if employee_number == 'EMP9999999' and employee.role != 'MANAGER':
+                employee.role = 'MANAGER'
+                employee.save()
+        except Employee.DoesNotExist:
+            # Create new employee
+            # Try to get username from emp_info
+            username = employee_number  # default to employee_number
+            try:
+                emp_info = EmpInfo.objects.get(emp_id=employee_number)
+                username = emp_info.name
+            except EmpInfo.DoesNotExist:
+                pass
+            
+            employee = Employee.objects.create(
+                username=username,
+                employee_number=employee_number,
+                role=default_role
+            )
         
         # Store employee info in session
         request.session['employee_id'] = employee.id
         request.session['employee_username'] = employee.username
         request.session['employee_role'] = employee.role
+        request.session['employee_number'] = employee.employee_number
         
         # Set session to not expire
         request.session.set_expiry(0)  # 0 means never expire (until browser closes if SESSION_EXPIRE_AT_BROWSER_CLOSE is True)

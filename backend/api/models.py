@@ -7,6 +7,7 @@ class Employee(models.Model):
     ]
     
     username = models.CharField(max_length=150, unique=True)
+    employee_number = models.CharField(max_length=20, unique=True, verbose_name="사번")
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
@@ -18,8 +19,24 @@ class Employee(models.Model):
     class Meta:
         db_table = 'employee'
     
+    def save(self, *args, **kwargs):
+        # Auto-populate username from emp_info if employee_number matches emp_id
+        if self.employee_number:
+            try:
+                emp_info = EmpInfo.objects.get(emp_id=self.employee_number)
+                new_username = emp_info.name
+                # Check if this username already exists for a different employee
+                if Employee.objects.filter(username=new_username).exclude(pk=self.pk).exists():
+                    new_username = f"{emp_info.name}_{self.employee_number}"
+                self.username = new_username
+            except EmpInfo.DoesNotExist:
+                # If no matching emp_info, keep existing username or set to employee_number
+                if not self.username:
+                    self.username = self.employee_number
+        super().save(*args, **kwargs)
+    
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        return f"{self.username} ({self.employee_number}) - {self.role}"
 
 class EmpInfo(models.Model):
     name = models.CharField(max_length=100, verbose_name="직원 이름")

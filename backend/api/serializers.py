@@ -4,15 +4,15 @@ from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpAppr
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
-        fields = ['id', 'username', 'role', 'created_at', 'updated_at']
+        fields = ['id', 'username', 'employee_number', 'role', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    username = serializers.CharField(help_text="사번을 입력하세요")
     
     def validate_username(self, value):
         if not value:
-            raise serializers.ValidationError("사용자명을 입력해주세요.")
+            raise serializers.ValidationError("사번을 입력해주세요.")
         return value
 
 class UpdateRoleSerializer(serializers.Serializer):
