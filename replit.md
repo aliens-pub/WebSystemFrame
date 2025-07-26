@@ -118,6 +118,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
+- July 26, 2025: Employee number authentication system 구현 완료 - employee 테이블에 employee_number 컬럼 추가, 기존 레코드들에 EMP 형식 사번 할당, 로그인 시스템을 사번 기반으로 변경, emp_info 테이블과 연동한 자동 사용자명 동기화 기능 추가, 프론트엔드 로그인 폼을 사번 입력으로 변경
 - July 24, 2025: 결재 경로 설정 시스템 구현 완료 - 부서별 직원 결재 역할 지정 기능 추가, emp_approval_role 테이블 생성하여 직원별 결재역할(결재/병렬결재/합의/병렬합의/통보) 저장, 프론트엔드에서 드롭다운으로 역할 선택 및 저장 기능 구현, department 필드 제거하여 단순화
 - July 22, 2025: 의뢰 상신 목록 조회 시스템 완료 - Menu1에서 상신된 request_submissions를 페이지네이션으로 목록 조회, 최신순 정렬, 한 페이지당 10개 항목 표시, 부서별 배지와 상신자 정보 표시, 검색 가능한 부서 선택 드롭다운 추가
 - July 22, 2025: 의뢰 상신 페이지 검색 기능 강화 - Menu2 부서 선택에 Command 컴포넌트 기반 실시간 검색 기능 추가, Popover와 키보드 네비게이션 지원, 체크 아이콘으로 선택 상태 표시
