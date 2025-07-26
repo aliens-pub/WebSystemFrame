@@ -2,25 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, FileText, Users, Check, ChevronsUpDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,44 +44,36 @@ export default function Menu2() {
   const { user, isAuthenticated } = useAuth();
 
   // 부서 목록 조회 (기존 직원 정보에서 부서 추출)
-  const {
-    data: empInfos,
-    isLoading: isDepartmentLoading,
-    error,
-  } = useQuery<EmpInfo[]>({
-    queryKey: ["/api/emp-info"],
+  const { data: empInfos, isLoading: isDepartmentLoading, error } = useQuery<EmpInfo[]>({
+    queryKey: ['/api/emp-info'],
     queryFn: async () => {
-      const response = await fetch("/api/emp-info", {
-        credentials: "include",
+      const response = await fetch('/api/emp-info', {
+        credentials: 'include'
       });
       if (!response.ok) {
-        throw new Error("부서 정보를 불러오는데 실패했습니다.");
+        throw new Error('부서 정보를 불러오는데 실패했습니다.');
       }
       return response.json();
     },
   });
 
   // 선택된 부서의 이메일 템플릿 조회
-  const { data: emailTemplate, isLoading: isTemplateLoading } =
-    useQuery<EmailTemplate>({
-      queryKey: ["/api/email-templates", selectedDepartment],
-      queryFn: async () => {
-        const response = await fetch(
-          `/api/email-templates/${selectedDepartment}`,
-          {
-            credentials: "include",
-          },
-        );
-        if (!response.ok) {
-          if (response.status === 404) {
-            return null;
-          }
-          throw new Error("템플릿을 불러오는데 실패했습니다.");
+  const { data: emailTemplate, isLoading: isTemplateLoading } = useQuery<EmailTemplate>({
+    queryKey: ['/api/email-templates', selectedDepartment],
+    queryFn: async () => {
+      const response = await fetch(`/api/email-templates/${selectedDepartment}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
         }
-        return response.json();
-      },
-      enabled: !!selectedDepartment,
-    });
+        throw new Error('템플릿을 불러오는데 실패했습니다.');
+      }
+      return response.json();
+    },
+    enabled: !!selectedDepartment,
+  });
 
   // 의뢰 상신 mutation
   const submitRequestMutation = useMutation({
@@ -107,19 +83,19 @@ export default function Menu2() {
       content: string;
       submitted_by: string;
     }) => {
-      const response = await fetch("/api/request-submissions", {
-        method: "POST",
+      const response = await fetch('/api/request-submissions', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        credentials: "include", // 세션 쿠키 포함
+        credentials: 'include', // 세션 쿠키 포함
         body: JSON.stringify(requestData),
       });
-
+      
       if (!response.ok) {
-        throw new Error("의뢰 상신에 실패했습니다.");
+        throw new Error('의뢰 상신에 실패했습니다.');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -143,7 +119,7 @@ export default function Menu2() {
 
   // 부서 목록 추출
   const departments = empInfos
-    ? [...new Set(empInfos.map((emp) => emp.department))].sort()
+    ? [...new Set(empInfos.map(emp => emp.department))].sort()
     : [];
 
   // 템플릿 로드 시 내용 설정
@@ -223,9 +199,7 @@ export default function Menu2() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <p className="text-red-600">
-                데이터를 불러오는 중 오류가 발생했습니다.
-              </p>
+              <p className="text-red-600">데이터를 불러오는 중 오류가 발생했습니다.</p>
             </div>
           </CardContent>
         </Card>
@@ -253,6 +227,7 @@ export default function Menu2() {
           <CardContent className="space-y-6">
             {/* 부서 선택 */}
             <div>
+              <Label htmlFor="department-select">의뢰 부서</Label>
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -262,10 +237,8 @@ export default function Menu2() {
                     className="w-2/5 justify-between"
                   >
                     {selectedDepartment
-                      ? departments.find(
-                          (department) => department === selectedDepartment,
-                        )
-                      : "의뢰 부서 선택"}
+                      ? departments.find((department) => department === selectedDepartment)
+                      : "의뢰할 부서를 검색하거나 선택하세요"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -285,22 +258,18 @@ export default function Menu2() {
                               key={department}
                               value={department}
                               onSelect={(currentValue) => {
-                                setSelectedDepartment(
-                                  currentValue === selectedDepartment
-                                    ? ""
-                                    : currentValue,
-                                );
+                                setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
                                 setOpen(false);
                               }}
-                              className={`${index >= 9 ? "opacity-60" : ""} ${
-                                index >= 10 ? "opacity-30" : ""
+                              className={`${
+                                index >= 9 ? 'opacity-60' : ''
+                              } ${
+                                index >= 10 ? 'opacity-30' : ''
                               }`}
                             >
                               <Check
                                 className={`mr-2 h-4 w-4 ${
-                                  selectedDepartment === department
-                                    ? "opacity-100"
-                                    : "opacity-0"
+                                  selectedDepartment === department ? "opacity-100" : "opacity-0"
                                 }`}
                               />
                               {department}
@@ -349,7 +318,8 @@ export default function Menu2() {
                 <p className="text-sm text-gray-500 mt-2">
                   {emailTemplate
                     ? `${selectedDepartment}의 저장된 템플릿을 불러왔습니다. 필요에 따라 수정하세요.`
-                    : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`}
+                    : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
+                  }
                 </p>
               </div>
             )}
@@ -370,7 +340,7 @@ export default function Menu2() {
             {/* 상신 버튼 */}
             {selectedDepartment && (
               <div className="flex justify-end">
-                <Button
+                <Button 
                   onClick={handleSubmitRequest}
                   disabled={submitRequestMutation.isPending}
                   className="min-w-[120px]"
