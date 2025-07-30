@@ -197,9 +197,60 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-## 5. 프론트엔드 구글 로그인 버튼 추가
+## 5. 프록시 서버 설정 수정 (필수)
 
-### 5.1 LoginModal 컴포넌트 수정 (client/src/components/LoginModal.tsx)
+현재 프로젝트는 포트 5000의 프록시 서버를 통해 요청을 라우팅합니다. 구글 OAuth가 작동하려면 `/accounts/*` 요청을 Django로 전달하도록 프록시를 수정해야 합니다.
+
+### 5.1 server/index.ts 수정
+
+```typescript
+// 기존 코드에서 API 프록시 부분을 다음과 같이 수정:
+
+// Manual proxy for API requests and accounts (OAuth) to preserve prefix
+app.use(['/api/*', '/accounts/*'], async (req, res) => {
+  try {
+    const targetUrl = `http://localhost:8000${req.originalUrl}`;
+    console.log('Proxying request:', req.originalUrl, 'to', targetUrl);
+    console.log('Request body:', req.body);
+    
+    // Forward all headers including cookies
+    const headers: any = {
+      'Content-Type': req.headers['content-type'] || 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Forward authorization and cookie headers
+    if (req.headers.authorization) {
+      headers['Authorization'] = req.headers.authorization;
+    }
+    if (req.headers.cookie) {
+      headers['Cookie'] = req.headers.cookie;
+    }
+    
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined
+    });
+    
+    const data = await response.text();
+    res.status(response.status);
+    
+    // Forward response headers including set-cookie
+    const responseHeaders = Object.fromEntries(response.headers.entries());
+    res.set(responseHeaders);
+    
+    res.send(data);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: 'Proxy error' });
+  }
+});
+```
+
+## 6. 프론트엔드 구글 로그인 버튼 추가
+
+### 6.1 LoginModal 컴포넌트 수정 (client/src/components/LoginModal.tsx)
 
 기존 로그인 폼 아래에 구글 로그인 버튼 추가:
 
@@ -234,40 +285,48 @@ import { FcGoogle } from "react-icons/fc";
 </div>
 ```
 
-## 6. 리디렉션 URI 설정
+## 7. 리디렉션 URI 설정
 
-### 6.1 개발 환경 (Replit)
-구글 개발자 콘솔에서 다음 URI를 승인된 리디렉션 URI에 추가:
+### 7.1 개발 환경 (Replit)
+현재 프로젝트는 포트 5000에서 프록시 서버가 실행되므로, 구글 개발자 콘솔에서 다음 URI를 승인된 리디렉션 URI에 추가:
 
 ```
 https://ced818b8-44d5-4f9c-9d49-403d57d2d79b-00-2jpswcpobth6w.worf.replit.dev/accounts/google/login/callback/
 ```
 
-### 6.2 프로덕션 환경 (배포 후)
+### 7.2 프로덕션 환경 (배포 후)
 배포된 도메인도 추가:
 ```
 https://your-app-name.replit.app/accounts/google/login/callback/
 ```
 
-## 7. 테스트 및 확인
+## 8. 테스트 및 확인
 
-1. Django 서버 재시작: `python manage.py runserver`
-2. 브라우저에서 로그인 페이지 접속
-3. "구글로 로그인" 버튼 클릭
+**중요**: 프록시 서버 설정을 수정한 후 반드시 서버를 재시작하세요.
+
+1. 서버 재시작: `npm run dev` (프록시, Django, Vite 모두 재시작)
+2. 브라우저에서 `https://your-replit-domain.replit.dev:5000` 접속
+3. 로그인 페이지에서 "구글로 로그인" 버튼 클릭
 4. 구글 인증 페이지로 리다이렉트 확인
 5. 구글 로그인 완료 후 기존 로그인 페이지로 리다이렉트 확인
 6. Django 관리자에서 생성된 사용자 및 소셜 계정 확인
 
-## 8. 주의사항
+**네트워크 흐름 확인**:
+- 사용자 → https://domain:5000 (프록시)
+- 프록시 → /accounts/* → Django:8000
+- 프록시 → 기타 → Vite:5173
+
+## 9. 주의사항
 
 - 구글 개발자 콘솔에서 리디렉션 URI를 정확히 설정해야 함
+- **프록시 설정 수정 필수**: `/accounts/*` 요청이 Django로 전달되도록 server/index.ts 수정
 - 프로덕션 배포 시에는 배포된 도메인도 리디렉션 URI에 추가
 - 환경 변수가 올바르게 설정되었는지 확인
 - HTTPS 환경에서만 정상 작동 (Replit은 기본적으로 HTTPS 제공)
 
-## 9. 에러 해결
+## 10. 에러 해결
 
-### 9.1 일반적인 오류들
+### 10.1 일반적인 오류들
 
 **redirect_uri_mismatch:**
 - 구글 콘솔의 승인된 리디렉션 URI 설정 확인
@@ -285,7 +344,11 @@ https://your-app-name.replit.app/accounts/google/login/callback/
 - CSRF_TRUSTED_ORIGINS 설정 확인
 - CORS 설정 확인
 
-### 9.2 Django 특정 오류들
+**프록시 404 오류:**
+- `/accounts/*` 요청이 Django로 전달되지 않음
+- server/index.ts에서 `/accounts/*`를 프록시 대상에 추가했는지 확인
+
+### 10.2 Django 특정 오류들
 
 **Social application not found:**
 - Django 관리자에서 소셜 애플리케이션 설정 확인
@@ -294,14 +357,15 @@ https://your-app-name.replit.app/accounts/google/login/callback/
 **No such table: socialaccount_socialapp:**
 - `python manage.py migrate` 실행
 
-### 9.3 디버깅 팁
+### 10.3 디버깅 팁
 
 - 브라우저 개발자 도구의 네트워크 탭에서 요청 확인
-- Django 서버 콘솔 로그 확인
+- Django 서버 콘솔 로그 확인 (포트 8000)
+- 프록시 서버 로그 확인 (포트 5000)
 - 환경 변수 출력으로 값 확인 (시크릿 제외)
 - 구글 콘솔의 사용량 및 오류 로그 확인
 
-### 9.4 테스트 명령어
+### 10.4 테스트 명령어
 
 **Django 설정 확인:**
 ```bash
@@ -317,7 +381,10 @@ echo $GOOGLE_CLIENT_ID
 echo $GOOGLE_CLIENT_SECRET
 ```
 
-## 10. 완성 체크리스트
+**프록시 동작 확인:**
+브라우저에서 `https://your-domain:5000/accounts/google/login/` 직접 접속해서 Django로 전달되는지 확인
+
+## 11. 완성 체크리스트
 
 - [ ] django-allauth 패키지 설치
 - [ ] settings.py에 OAuth 설정 추가
