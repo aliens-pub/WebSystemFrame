@@ -1,293 +1,245 @@
-# 502 Bad Gateway(nginx) 에러 해결 가이드
+# Replit 환경에서 독립 Django 프로젝트 502 Bad Gateway 에러 해결 가이드
 
-## 개요
+## 문제 상황
 
-"502 Bad Gateway(nginx)" 에러는 프록시 서버(nginx 또는 Express 프록시)가 백엔드 서버로부터 유효한 응답을 받지 못할 때 발생합니다. 현재 프로젝트 구조에서는 Express 프록시(포트 5000)가 Django(포트 8000) 또는 Vite(포트 5173) 서버와 통신하지 못할 때 이 에러가 나타납니다.
+독립적인 Django 프로젝트에서 `python manage.py runserver`로 포트 8000에서 서버를 실행했으나, 브라우저 접속 시 "502 Bad Gateway(nginx)" 에러가 발생하는 상황입니다. 이는 Replit 환경의 특수한 네트워킹 구조 때문에 발생하는 문제입니다.
 
-## 1. 즉시 점검 사항
+## Replit 환경의 네트워킹 구조
 
-### 1.1 서버 상태 확인
+Replit은 사용자가 실행하는 모든 서버 앞에 자체 프록시/로드밸런서를 두고 있습니다. 이 프록시가 사용자의 요청을 받아서 실제 애플리케이션으로 전달하는 역할을 합니다.
+
+### 문제 원인
+1. **Replit 프록시**: 모든 HTTP 요청은 Replit의 내부 프록시를 거쳐야 함
+2. **포트 바인딩**: Django가 `127.0.0.1:8000`에만 바인딩되어 있으면 프록시에서 접근 불가
+3. **도메인 설정**: `ALLOWED_HOSTS`에 Replit 도메인이 없으면 Django가 요청을 거부
+
+## 해결 방법
+
+### 1. Django 서버를 모든 인터페이스에 바인딩
+
+**기존 명령어 (문제):**
 ```bash
-# 실행 중인 포트 확인
-netstat -tulpn | grep :5000  # 프록시 서버
-netstat -tulpn | grep :8000  # Django 서버
-netstat -tulpn | grep :5173  # Vite 서버
-
-# 또는 Replit 환경에서
-ps aux | grep python    # Django 프로세스 확인
-ps aux | grep node      # Express 프록시 및 Vite 프로세스 확인
+python manage.py runserver
+# 또는
+python manage.py runserver 127.0.0.1:8000
 ```
 
-### 1.2 서버 재시작
+**수정된 명령어 (해결):**
 ```bash
-# 전체 서버 재시작
-npm run dev
-
-# 개별 서버 확인이 필요한 경우
-python start_django.py    # Django만 실행
-npx vite --host 0.0.0.0   # Vite만 실행
+python manage.py runserver 0.0.0.0:8000
 ```
 
-## 2. 점검해야 할 파일들
+### 2. Django settings.py 수정
 
-### 2.1 Express 프록시 서버 설정
-**파일: `server/index.ts`**
-
-```typescript
-// 다음 항목들을 점검:
-
-1. Django 프록시 설정이 올바른지 확인
-app.use('/api/*', async (req, res) => {
-  const targetUrl = `http://localhost:8000${req.url}`;
-  // Django 서버 연결 상태 확인
-});
-
-2. Vite 프록시 설정 확인
-app.use('/', createProxyMiddleware({
-  target: 'http://localhost:5173',
-  changeOrigin: true,
-  ws: true,
-}));
-
-3. 서버 시작 순서 확인
-setTimeout(() => {
-  // 프록시 서버는 Django/Vite 시작 후에 실행되어야 함
-}, 5000);
-```
-
-**점검 사항:**
-- Django 서버가 완전히 시작되기 전에 프록시가 요청을 보내는지 확인
-- `localhost:8000`, `localhost:5173` 주소가 정확한지 확인
-- 타임아웃 설정이 적절한지 확인
-
-### 2.2 Django 백엔드 설정
-**파일: `backend/business_system/settings.py`**
+**수정할 파일: `settings.py`**
 
 ```python
-# 다음 설정들을 점검:
+import os
 
+# 1. ALLOWED_HOSTS 설정 - Replit 도메인 허용
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
-    # Replit 도메인도 추가해야 함
+    '.replit.dev',      # Replit 개발 도메인
+    '.replit.app',      # Replit 배포 도메인
+    '*',                # 개발 중에만 사용 (프로덕션에서는 제거)
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5000",
-    "http://localhost:5173",
-    # Replit 도메인도 추가
-]
+# 2. DEBUG 모드 확인 (개발 중에는 True로 설정)
+DEBUG = True
 
-# 데이터베이스 연결 확인
+# 3. CORS 설정 (필요한 경우)
+CORS_ALLOW_ALL_ORIGINS = True  # 개발 중에만 사용
+
+# 4. 데이터베이스 설정 (SQLite 사용 시)
 DATABASES = {
-    'default': dj_database_url.parse(os.environ.get("DATABASE_URL"))
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
+
+# 5. 정적 파일 설정
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 ```
 
-**파일: `backend/business_system/urls.py`**
+### 3. Django URLs 설정 확인
+
+**수정할 파일: `urls.py` (메인 프로젝트)**
 
 ```python
-# URL 패턴이 올바른지 확인
+from django.contrib import admin
+from django.urls import path, include
+from django.http import HttpResponse
+
+# 간단한 루트 뷰 추가
+def home_view(request):
+    return HttpResponse("<h1>Django 서버가 정상적으로 실행 중입니다!</h1>")
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('app.urls')),  # API 경로 확인
+    path('', home_view, name='home'),  # 루트 경로 추가
 ]
 ```
 
-### 2.3 Django 앱 URL 설정
-**파일: `backend/app/urls.py`**
+### 4. 포트 확인 및 프로세스 정리
 
-```python
-# API 엔드포인트가 올바르게 정의되어 있는지 확인
-urlpatterns = [
-    path('auth/login/', views.login_view, name='login'),
-    path('auth/me/', views.get_current_user, name='current_user'),
-    # 기타 API 엔드포인트들...
-]
-```
-
-### 2.4 환경 변수 파일
-**파일: `.env` (프로젝트 루트)**
-
-```env
-# 필수 환경 변수들이 설정되어 있는지 확인
-DATABASE_URL=postgresql://...
-NODE_ENV=development
-```
-
-### 2.5 Django 실행 스크립트
-**파일: `start_django.py`**
-
-```python
-# Django 서버 실행 명령이 올바른지 확인
-cmd = [sys.executable, 'manage.py', 'runserver', '0.0.0.0:8000']
-
-# 현재 디렉토리가 올바른지 확인
-os.chdir('backend')
-```
-
-## 3. 일반적인 원인별 해결책
-
-### 3.1 Django 서버 시작 실패
-**원인:**
-- 데이터베이스 연결 오류
-- 포트 8000 이미 사용 중
-- Python 의존성 문제
-
-**해결책:**
 ```bash
-cd backend
-python manage.py check        # Django 설정 검증
-python manage.py runserver    # Django 단독 실행 테스트
-pip install -r requirements.txt  # 의존성 재설치
+# 1. 현재 8000 포트를 사용 중인 프로세스 확인
+lsof -i :8000
+
+# 2. 기존 Django 프로세스 종료 (필요한 경우)
+pkill -f "python.*manage.py.*runserver"
+
+# 3. 포트 강제 해제 (필요한 경우)
+kill -9 $(lsof -ti:8000)
+
+# 4. 새로 서버 시작
+python manage.py runserver 0.0.0.0:8000
 ```
 
-### 3.2 Vite 서버 시작 실패
-**원인:**
-- Node.js 의존성 문제
-- 포트 5173 이미 사용 중
-- 빌드 오류
+### 5. Replit 환경 변수 확인
 
-**해결책:**
 ```bash
-npm install              # 의존성 재설치
-npx vite --host 0.0.0.0  # Vite 단독 실행 테스트
-npm run build            # 빌드 테스트
+# Replit 관련 환경 변수 확인
+echo $REPL_SLUG
+echo $REPL_OWNER
+echo $REPLIT_DB_URL
+
+# Django 실행 전 환경 변수 설정 (필요한 경우)
+export DJANGO_SETTINGS_MODULE=myproject.settings
+export PYTHONPATH=$PYTHONPATH:/home/runner/$REPL_SLUG
 ```
 
-### 3.3 프록시 서버 라우팅 오류
-**원인:**
-- API 경로 매칭 오류 (`/api/*` vs `/api/`)
-- 백엔드 서버 응답 지연
-- CORS 설정 문제
+## 단계별 해결 가이드
 
-**해결책:**
-```typescript
-// server/index.ts에서 더 상세한 에러 핸들링 추가
-app.use('/api', async (req, res) => {
-  try {
-    const response = await fetch(`http://localhost:8000/api${req.url}`, {
-      method: req.method,
-      headers: req.headers,
-      body: req.body,
-    });
-    
-    if (!response.ok) {
-      console.error(`Django 응답 오류: ${response.status}`);
-    }
-    
-    // 응답 전달...
-  } catch (error) {
-    console.error('Django 서버 연결 실패:', error);
-    res.status(502).json({ error: 'Backend server unavailable' });
-  }
-});
-```
-
-## 4. 디버깅 단계별 가이드
-
-### 4.1 1단계: 개별 서버 상태 확인
+### 단계 1: 즉시 해결 시도
 ```bash
-# Django 서버 테스트
-curl http://localhost:8000/api/auth/me
-
-# Vite 서버 테스트
-curl http://localhost:5173/
-
-# 프록시 서버 테스트
-curl http://localhost:5000/api/auth/me
-```
-
-### 4.2 2단계: 로그 확인
-```bash
-# Django 로그 (콘솔에서 확인)
-# Express 프록시 로그 (콘솔에서 확인)
-# 브라우저 개발자 도구 네트워크 탭
-```
-
-### 4.3 3단계: 설정 파일 검증
-- CORS 설정이 프록시 도메인을 허용하는지
-- URL 패턴이 올바른지
-- 환경 변수가 로드되는지
-
-### 4.4 4단계: 순차적 재시작
-```bash
-# 1. Django 종료 후 재시작
+# 1. 기존 서버 종료
 pkill -f "python.*manage.py"
-python start_django.py
 
-# 2. Vite 재시작
-pkill -f "vite"
-npx vite --host 0.0.0.0
+# 2. 올바른 바인딩으로 서버 재시작
+python manage.py runserver 0.0.0.0:8000
 
-# 3. 프록시 서버 재시작
-npm run dev
+# 3. 브라우저에서 다시 접속 테스트
 ```
 
-## 5. Replit 환경 특화 점검사항
-
-### 5.1 포트 바인딩 확인
+### 단계 2: settings.py 수정
 ```python
-# Django settings.py에서
-# 0.0.0.0으로 바인딩되어 있는지 확인
+# settings.py에 다음 설정 추가
+ALLOWED_HOSTS = ['*']  # 개발용 임시 설정
+DEBUG = True
 ```
 
-### 5.2 도메인 설정
+### 단계 3: URL 패턴 확인
 ```python
-# ALLOWED_HOSTS에 Replit 도메인 추가
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    'your-repl-name.replit.dev',
-    'your-repl-name.replit.app',
+# urls.py에 기본 홈페이지 추가
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("Hello, Django!")
+
+urlpatterns = [
+    path('', home),
+    path('admin/', admin.site.urls),
 ]
 ```
 
-### 5.3 워크플로우 재시작
-Replit의 "Start application" 워크플로우가 제대로 실행되고 있는지 확인
-
-## 6. 예방 조치
-
-### 6.1 헬스체크 엔드포인트 추가
-```python
-# backend/app/views.py
-def health_check(request):
-    return JsonResponse({'status': 'healthy', 'timestamp': timezone.now()})
-```
-
-### 6.2 프록시 서버에 재시도 로직 추가
-```typescript
-// server/index.ts
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
-
-// Django 서버 연결 시 재시도 로직 구현
-```
-
-### 6.3 모니터링 로그 추가
-```typescript
-// 요청/응답 로깅
-console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} -> ${response.status}`);
-```
-
-## 7. 긴급 복구 명령어
-
+### 단계 4: 마이그레이션 실행
 ```bash
-# 모든 Node.js 프로세스 종료
-pkill -f node
-
-# 모든 Python 프로세스 종료
-pkill -f python
-
-# 전체 재시작
-npm run dev
-
-# 포트 사용 중인 프로세스 강제 종료
-sudo lsof -ti:5000 | xargs kill -9
-sudo lsof -ti:8000 | xargs kill -9
-sudo lsof -ti:5173 | xargs kill -9
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver 0.0.0.0:8000
 ```
 
-이 가이드를 따라 단계별로 점검하면 502 Bad Gateway 에러의 원인을 빠르게 파악하고 해결할 수 있습니다.
+## Replit 특화 Django 실행 스크립트
+
+**파일명: `run_django.py`**
+
+```python
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+
+def main():
+    # Replit 환경에서 Django 서버 실행
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
+    
+    # 마이그레이션 실행
+    print("마이그레이션 실행 중...")
+    subprocess.run([sys.executable, 'manage.py', 'migrate'], check=False)
+    
+    # 정적 파일 수집 (필요한 경우)
+    print("정적 파일 수집 중...")
+    subprocess.run([sys.executable, 'manage.py', 'collectstatic', '--noinput'], check=False)
+    
+    # 서버 시작
+    print("Django 서버 시작 중...")
+    print("접속 URL: https://{}.replit.dev".format(os.getenv('REPL_SLUG', 'your-repl')))
+    
+    subprocess.run([
+        sys.executable, 
+        'manage.py', 
+        'runserver', 
+        '0.0.0.0:8000'
+    ])
+
+if __name__ == '__main__':
+    main()
+```
+
+**실행 방법:**
+```bash
+python run_django.py
+```
+
+## 접속 URL 확인
+
+Replit에서는 다음 URL로 접속해야 합니다:
+
+```
+https://your-repl-name.replit.dev/
+```
+
+**포트 번호는 URL에 포함하지 마세요!** Replit 프록시가 자동으로 포트 8000으로 라우팅합니다.
+
+## 문제 지속 시 추가 확인사항
+
+### 1. Django 버전 호환성
+```bash
+python -c "import django; print(django.VERSION)"
+pip install --upgrade django
+```
+
+### 2. Python 경로 확인
+```bash
+which python
+python --version
+```
+
+### 3. Django 프로젝트 구조 확인
+```bash
+tree -L 2  # 프로젝트 구조 확인
+ls -la manage.py  # manage.py 파일 존재 확인
+```
+
+### 4. Replit 콘솔에서 로그 확인
+Django 서버 실행 시 콘솔에 나타나는 모든 오류 메시지를 확인하세요.
+
+## 성공 확인 방법
+
+1. **콘솔 출력 확인:**
+   ```
+   Django version X.X.X, using settings 'myproject.settings'
+   Starting development server at http://0.0.0.0:8000/
+   Quit the server with CONTROL-C.
+   ```
+
+2. **브라우저 접속 성공:** `https://your-repl-name.replit.dev`에서 Django 기본 페이지 또는 설정한 홈페이지가 표시
+
+3. **관리자 페이지 접속 가능:** `https://your-repl-name.replit.dev/admin/`
+
+이 가이드를 따라하면 Replit 환경에서 독립적인 Django 프로젝트의 502 Bad Gateway 에러를 해결할 수 있습니다.
