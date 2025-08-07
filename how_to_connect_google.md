@@ -384,7 +384,218 @@ echo $GOOGLE_CLIENT_SECRET
 **프록시 동작 확인:**
 브라우저에서 `https://your-domain:5000/accounts/google/login/` 직접 접속해서 Django로 전달되는지 확인
 
-## 11. 완성 체크리스트
+## 11. 자동 구글 로그인 리다이렉트 설정 (사용자 요청 추가)
+
+### 11.1 페이지 접속 시 자동 구글 로그인으로 이동
+
+기존 방법은 LoginModal에서 버튼을 클릭해야 구글 로그인으로 이동했지만, 페이지 접속 시 바로 구글 로그인 페이지로 이동하도록 수정할 수 있습니다.
+
+#### 방법 1: App.tsx에서 직접 리다이렉트
+
+```tsx
+// client/src/App.tsx 수정
+function App() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 인증되지 않은 경우 바로 구글 로그인으로 리다이렉트
+  if (!isAuthenticated) {
+    window.location.href = '/accounts/google/login/';
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">구글 로그인으로 이동 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 인증된 경우 기존 Dashboard 표시
+  return (
+    <div className="min-h-screen w-full">
+      <Router>
+        <Header />
+        <main className="p-4">
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/menu1" component={Menu1} />
+            <Route path="/menu2" component={Menu2} />
+            <Route path="/menu3" component={Menu3} />
+            <Route path="/menu4" component={Menu4} />
+            <Route path="/settings" component={Settings} />
+            <Route component={NotFound} />
+          </Switch>
+        </main>
+      </Router>
+    </div>
+  );
+}
+```
+
+#### 방법 2: useEffect를 사용한 리다이렉트
+
+```tsx
+// client/src/App.tsx - useEffect 방식
+import { useEffect } from 'react';
+
+function App() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      window.location.href = '/accounts/google/login/';
+    }
+  }, [isAuthenticated, isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">인증 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">구글 로그인으로 이동 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 나머지 코드는 동일...
+}
+```
+
+### 11.2 구글 로그인 성공 후 Dashboard로 리다이렉트
+
+#### Django 백엔드 수정
+
+```python
+# api/views.py - google_login_success 함수 수정
+@api_view(['GET'])
+def google_login_success(request):
+    """구글 로그인 성공 후 처리"""
+    if request.user.is_authenticated:
+        try:
+            social_account = SocialAccount.objects.get(user=request.user, provider='google')
+            
+            # Employee 객체 찾기 또는 생성
+            employee, created = Employee.objects.get_or_create(
+                email=request.user.email,
+                defaults={
+                    'username': f'google_{social_account.uid}',
+                    'employee_number': f'GOOGLE_{social_account.uid}',
+                    'role': 'EMPLOYEE',
+                    'department': 'GENERAL',
+                }
+            )
+            
+            # 세션에 employee 정보 저장
+            request.session['employee_id'] = employee.id
+            request.session['employee_username'] = employee.username
+            request.session['employee_role'] = employee.role
+            request.session['employee_number'] = employee.employee_number
+            
+            # Dashboard로 직접 리다이렉트 (기존 '/'에서 변경)
+            return redirect('/?dashboard=true')  # 쿼리 파라미터로 구분
+            
+        except SocialAccount.DoesNotExist:
+            return redirect('/?error=social_account_not_found')
+    
+    return redirect('/?error=authentication_failed')
+```
+
+#### 프론트엔드에서 Dashboard 우선 표시
+
+```tsx
+// client/src/App.tsx - Dashboard 우선 표시 로직 추가
+import { useLocation } from 'wouter';
+
+function App() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
+  
+  // URL 쿼리 파라미터 확인
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDashboardRedirect = urlParams.get('dashboard') === 'true';
+
+  // 인증된 경우의 라우팅
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen w-full">
+        <Router>
+          <Header />
+          <main className="p-4">
+            <Switch>
+              {/* 구글 로그인 성공 후 Dashboard를 기본으로 표시 */}
+              <Route path="/" component={() => {
+                if (isDashboardRedirect || location === '/') {
+                  return <Dashboard />;
+                }
+                return <Dashboard />; // 기본적으로 Dashboard 표시
+              }} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/menu1" component={Menu1} />
+              <Route path="/menu2" component={Menu2} />
+              <Route path="/menu3" component={Menu3} />
+              <Route path="/menu4" component={Menu4} />
+              <Route path="/settings" component={Settings} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </Router>
+      </div>
+    );
+  }
+
+  // 나머지 로직은 동일...
+}
+```
+
+### 11.3 Django settings.py 리다이렉트 설정 수정
+
+```python
+# settings.py - 로그인 성공 후 리다이렉트 URL 수정
+LOGIN_REDIRECT_URL = '/?dashboard=true'  # Dashboard로 바로 이동
+LOGOUT_REDIRECT_URL = '/'
+```
+
+### 11.4 완전한 자동화 흐름
+
+1. **사용자 첫 접속**: `http://localhost:5000`
+2. **인증 확인**: `isAuthenticated = false`
+3. **자동 리다이렉트**: `/accounts/google/login/`로 이동
+4. **구글 인증**: 구글 로그인 페이지에서 인증
+5. **Django 처리**: `google_login_success` 뷰에서 Employee 생성/업데이트
+6. **세션 저장**: Django 세션에 사용자 정보 저장
+7. **Dashboard 리다이렉트**: `/?dashboard=true`로 이동
+8. **프론트엔드**: `useAuth`가 인증 확인 후 Dashboard 표시
+
+### 11.5 주의사항
+
+- **무한 리다이렉트 방지**: `isLoading` 상태를 정확히 확인하여 리다이렉트 중복 실행 방지
+- **브라우저 뒤로가기**: 구글 로그인 중 뒤로가기를 누르면 다시 자동 리다이렉트 발생
+- **개발 환경**: 로컬 테스트 시 무한 리다이렉트가 발생할 수 있으니 브라우저 시크릿 모드 사용 권장
+
+## 12. 완성 체크리스트
 
 - [ ] django-allauth 패키지 설치
 - [ ] settings.py에 OAuth 설정 추가
@@ -392,7 +603,9 @@ echo $GOOGLE_CLIENT_SECRET
 - [ ] 마이그레이션 실행
 - [ ] Django 관리자에서 소셜 애플리케이션 설정
 - [ ] Employee 모델에 email 필드 추가 (필요 시)
-- [ ] 프론트엔드에 구글 로그인 버튼 추가
+- [ ] 프론트엔드에 구글 로그인 버튼 추가 (또는 자동 리다이렉트)
 - [ ] 구글 개발자 콘솔에서 리디렉션 URI 설정
 - [ ] 환경 변수 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET 설정
+- [ ] App.tsx에서 자동 리다이렉트 로직 구현 (선택사항)
+- [ ] Django에서 Dashboard 리다이렉트 설정 (선택사항)
 - [ ] 테스트 실행 및 확인
