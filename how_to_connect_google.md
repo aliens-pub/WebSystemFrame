@@ -1,26 +1,21 @@
-# 구글 OAuth2.0 로그인 연동 가이드 (Django 백엔드)
+# 구글 OAuth 자동 로그인 설정 가이드
 
-## 1. 전제 조건
+## 전제 조건
 - 구글 개발자 콘솔에서 OAuth 클라이언트 ID와 시크릿 발급 완료
-- 승인된 리디렉션 URI 설정: `https://your-replit-domain.replit.dev/accounts/google/login/callback/`
 
-## 2. 환경 변수 설정
+## 원하는 동작
+1. 웹페이지 접속 시 로그인 페이지 없이 바로 구글 자동 로그인 실행
+2. 로그인 완료되면 Dashboard로 리다이렉트
 
-프로젝트의 환경 변수에 다음 값들을 추가하세요:
-```
-GOOGLE_CLIENT_ID=your_google_client_id_here
-GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-```
+## 필요한 코드 수정/추가 절차
 
-## 3. Django 백엔드 구글 OAuth 설정
-
-### 3.1 Django 패키지 설치
+### 1. Django 패키지 설치
 
 ```bash
 pip install django-allauth
 ```
 
-### 3.2 Django 설정 파일 수정 (settings.py)
+### 2. Django settings.py 수정
 
 ```python
 import os
@@ -58,30 +53,16 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# OAuth 리디렉션 설정
-LOGIN_REDIRECT_URL = '/'
+# 리다이렉트 설정 - Dashboard로 바로 이동
+LOGIN_REDIRECT_URL = '/?dashboard=true'
 LOGOUT_REDIRECT_URL = '/'
 
 # 환경 변수 설정
 GOOGLE_OAUTH2_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_OAUTH2_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-
-# CSRF 및 CORS 설정 (React와 분리된 경우)
-CSRF_TRUSTED_ORIGINS = [
-    'https://your-replit-domain.replit.dev',
-]
-
-# CORS 설정 (django-cors-headers 사용 시)
-CORS_ALLOWED_ORIGINS = [
-    "https://your-replit-domain.replit.dev",
-]
-
-CORS_ALLOW_CREDENTIALS = True
 ```
 
-### 3.3 Django URL 설정 (urls.py)
-
-메인 urls.py에 allauth URL 추가:
+### 3. Django 메인 urls.py 수정
 
 ```python
 from django.contrib import admin
@@ -94,124 +75,22 @@ urlpatterns = [
 ]
 ```
 
-### 3.4 Django 마이그레이션
+### 4. Django 마이그레이션 실행
 
 ```bash
 python manage.py migrate
 ```
 
-### 3.5 Django 관리자에서 소셜 애플리케이션 설정
+### 5. Express 프록시 서버 수정 (server/index.ts)
 
-Django 관리자 패널에서 다음 설정:
-
-1. `/admin/` 접속
-2. `Social applications` → `Add social application`
-3. 다음 정보 입력:
-   - Provider: Google
-   - Name: Google OAuth
-   - Client id: `구글 클라이언트 ID`
-   - Secret key: `구글 클라이언트 시크릿`
-   - Sites: `example.com` 선택 (기본 사이트)
-
-### 3.6 Django 뷰 수정 (views.py)
-
-구글 로그인 처리를 위한 뷰 추가:
-
-```python
-from django.shortcuts import redirect
-from django.contrib.auth import login
-from django.contrib.auth.models import User
-from allauth.socialaccount.models import SocialAccount
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from django.http import JsonResponse
-from .models import Employee
-
-@api_view(['GET'])
-def google_login_success(request):
-    """구글 로그인 성공 후 처리"""
-    if request.user.is_authenticated:
-        try:
-            social_account = SocialAccount.objects.get(user=request.user, provider='google')
-            
-            # Employee 객체 찾기 또는 생성
-            employee, created = Employee.objects.get_or_create(
-                email=request.user.email,
-                defaults={
-                    'username': f'google_{social_account.uid}',
-                    'employee_number': f'GOOGLE_{social_account.uid}',
-                    'role': 'EMPLOYEE',
-                    'department': 'GENERAL',
-                }
-            )
-            
-            # 세션에 employee 정보 저장
-            request.session['employee_id'] = employee.id
-            request.session['employee_username'] = employee.username
-            request.session['employee_role'] = employee.role
-            request.session['employee_number'] = employee.employee_number
-            
-            # React 앱으로 리다이렉트
-            return redirect('/')
-            
-        except SocialAccount.DoesNotExist:
-            return redirect('/?error=social_account_not_found')
-    
-    return redirect('/?error=authentication_failed')
-```
-
-### 3.7 Django URL 패턴 추가
-
-앱의 urls.py에 추가:
-
-```python
-from django.urls import path
-from . import views
-
-urlpatterns = [
-    # 기존 URL 패턴들...
-    path('auth/google/success/', views.google_login_success, name='google_login_success'),
-]
-```
-
-## 4. Django 모델 수정 (필요한 경우)
-
-Employee 모델에 email 필드가 없다면 추가:
-
-```python
-# models.py
-class Employee(models.Model):
-    username = models.CharField(max_length=255, unique=True)
-    email = models.EmailField(unique=True, null=True, blank=True)  # 이 필드 추가
-    role = models.CharField(max_length=50, default='EMPLOYEE')
-    department = models.CharField(max_length=100)
-    employee_number = models.CharField(max_length=50, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-```
-
-마이그레이션 실행:
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-## 5. 프록시 서버 설정 수정 (필수)
-
-현재 프로젝트는 포트 5000의 프록시 서버를 통해 요청을 라우팅합니다. 구글 OAuth가 작동하려면 `/accounts/*` 요청을 Django로 전달하도록 프록시를 수정해야 합니다.
-
-### 5.1 server/index.ts 수정
+기존 `/api/*` 프록시를 `/api/*`와 `/accounts/*` 모두 처리하도록 수정:
 
 ```typescript
-// 기존 코드에서 API 프록시 부분을 다음과 같이 수정:
-
 // Manual proxy for API requests and accounts (OAuth) to preserve prefix
 app.use(['/api/*', '/accounts/*'], async (req, res) => {
   try {
     const targetUrl = `http://localhost:8000${req.originalUrl}`;
     console.log('Proxying request:', req.originalUrl, 'to', targetUrl);
-    console.log('Request body:', req.body);
     
     // Forward all headers including cookies
     const headers: any = {
@@ -248,152 +127,10 @@ app.use(['/api/*', '/accounts/*'], async (req, res) => {
 });
 ```
 
-## 6. 프론트엔드 구글 로그인 버튼 추가
-
-### 6.1 LoginModal 컴포넌트 수정 (client/src/components/LoginModal.tsx)
-
-기존 로그인 폼 아래에 구글 로그인 버튼 추가:
+### 6. App.tsx 수정 - 자동 구글 로그인 리다이렉트
 
 ```tsx
-// import 추가
-import { FcGoogle } from "react-icons/fc";
-
-// 기존 로그인 폼 아래에 추가
-<div className="mt-6">
-  <div className="relative">
-    <div className="absolute inset-0 flex items-center">
-      <div className="w-full border-t border-gray-300" />
-    </div>
-    <div className="relative flex justify-center text-sm">
-      <span className="px-2 bg-white text-gray-500">또는</span>
-    </div>
-  </div>
-
-  <div className="mt-6">
-    <Button
-      type="button"
-      variant="outline"
-      className="w-full"
-      onClick={() => {
-        window.location.href = '/accounts/google/login/';
-      }}
-    >
-      <FcGoogle className="mr-2 h-4 w-4" />
-      구글로 로그인
-    </Button>
-  </div>
-</div>
-```
-
-## 7. 리디렉션 URI 설정
-
-### 7.1 개발 환경 (Replit)
-현재 프로젝트는 포트 5000에서 프록시 서버가 실행되므로, 구글 개발자 콘솔에서 다음 URI를 승인된 리디렉션 URI에 추가:
-
-```
-https://ced818b8-44d5-4f9c-9d49-403d57d2d79b-00-2jpswcpobth6w.worf.replit.dev/accounts/google/login/callback/
-```
-
-### 7.2 프로덕션 환경 (배포 후)
-배포된 도메인도 추가:
-```
-https://your-app-name.replit.app/accounts/google/login/callback/
-```
-
-## 8. 테스트 및 확인
-
-**중요**: 프록시 서버 설정을 수정한 후 반드시 서버를 재시작하세요.
-
-1. 서버 재시작: `npm run dev` (프록시, Django, Vite 모두 재시작)
-2. 브라우저에서 `https://your-replit-domain.replit.dev:5000` 접속
-3. 로그인 페이지에서 "구글로 로그인" 버튼 클릭
-4. 구글 인증 페이지로 리다이렉트 확인
-5. 구글 로그인 완료 후 기존 로그인 페이지로 리다이렉트 확인
-6. Django 관리자에서 생성된 사용자 및 소셜 계정 확인
-
-**네트워크 흐름 확인**:
-- 사용자 → https://domain:5000 (프록시)
-- 프록시 → /accounts/* → Django:8000
-- 프록시 → 기타 → Vite:5173
-
-## 9. 주의사항
-
-- 구글 개발자 콘솔에서 리디렉션 URI를 정확히 설정해야 함
-- **프록시 설정 수정 필수**: `/accounts/*` 요청이 Django로 전달되도록 server/index.ts 수정
-- 프로덕션 배포 시에는 배포된 도메인도 리디렉션 URI에 추가
-- 환경 변수가 올바르게 설정되었는지 확인
-- HTTPS 환경에서만 정상 작동 (Replit은 기본적으로 HTTPS 제공)
-
-## 10. 에러 해결
-
-### 10.1 일반적인 오류들
-
-**redirect_uri_mismatch:**
-- 구글 콘솔의 승인된 리디렉션 URI 설정 확인
-- 정확한 도메인과 경로 사용 (`/accounts/google/login/callback/`)
-
-**invalid_client:**
-- 클라이언트 ID/시크릿 환경 변수 확인
-- 구글 콘솔에서 OAuth 클라이언트 상태 확인
-
-**unauthorized_client:**
-- OAuth 동의 화면 설정 완료 여부 확인
-- 테스트 사용자 추가 (개발 단계)
-
-**CSRF verification failed:**
-- CSRF_TRUSTED_ORIGINS 설정 확인
-- CORS 설정 확인
-
-**프록시 404 오류:**
-- `/accounts/*` 요청이 Django로 전달되지 않음
-- server/index.ts에서 `/accounts/*`를 프록시 대상에 추가했는지 확인
-
-### 10.2 Django 특정 오류들
-
-**Social application not found:**
-- Django 관리자에서 소셜 애플리케이션 설정 확인
-- Sites 프레임워크 설정 확인
-
-**No such table: socialaccount_socialapp:**
-- `python manage.py migrate` 실행
-
-### 10.3 디버깅 팁
-
-- 브라우저 개발자 도구의 네트워크 탭에서 요청 확인
-- Django 서버 콘솔 로그 확인 (포트 8000)
-- 프록시 서버 로그 확인 (포트 5000)
-- 환경 변수 출력으로 값 확인 (시크릿 제외)
-- 구글 콘솔의 사용량 및 오류 로그 확인
-
-### 10.4 테스트 명령어
-
-**Django 설정 확인:**
-```bash
-python manage.py shell
->>> from django.conf import settings
->>> print(settings.SOCIALACCOUNT_PROVIDERS)
->>> print(settings.GOOGLE_OAUTH2_CLIENT_ID)  # None이 아닌지 확인
-```
-
-**환경 변수 확인:**
-```bash
-echo $GOOGLE_CLIENT_ID
-echo $GOOGLE_CLIENT_SECRET
-```
-
-**프록시 동작 확인:**
-브라우저에서 `https://your-domain:5000/accounts/google/login/` 직접 접속해서 Django로 전달되는지 확인
-
-## 11. 자동 구글 로그인 리다이렉트 설정 (사용자 요청 추가)
-
-### 11.1 페이지 접속 시 자동 구글 로그인으로 이동
-
-기존 방법은 LoginModal에서 버튼을 클릭해야 구글 로그인으로 이동했지만, 페이지 접속 시 바로 구글 로그인 페이지로 이동하도록 수정할 수 있습니다.
-
-#### 방법 1: App.tsx에서 직접 리다이렉트
-
-```tsx
-// client/src/App.tsx 수정
+// client/src/App.tsx
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -402,7 +139,7 @@ function App() {
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
+          <p className="text-gray-600">인증 확인 중...</p>
         </div>
       </div>
     );
@@ -421,7 +158,7 @@ function App() {
     );
   }
 
-  // 인증된 경우 기존 Dashboard 표시
+  // 인증된 경우 Dashboard 표시
   return (
     <div className="min-h-screen w-full">
       <Router>
@@ -429,6 +166,7 @@ function App() {
         <main className="p-4">
           <Switch>
             <Route path="/" component={Dashboard} />
+            <Route path="/dashboard" component={Dashboard} />
             <Route path="/menu1" component={Menu1} />
             <Route path="/menu2" component={Menu2} />
             <Route path="/menu3" component={Menu3} />
@@ -443,53 +181,16 @@ function App() {
 }
 ```
 
-#### 방법 2: useEffect를 사용한 리다이렉트
-
-```tsx
-// client/src/App.tsx - useEffect 방식
-import { useEffect } from 'react';
-
-function App() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.href = '/accounts/google/login/';
-    }
-  }, [isAuthenticated, isLoading]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">인증 확인 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">구글 로그인으로 이동 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 나머지 코드는 동일...
-}
-```
-
-### 11.2 구글 로그인 성공 후 Dashboard로 리다이렉트
-
-#### Django 백엔드 수정
+### 7. Django 구글 로그인 성공 처리 뷰 추가 (api/views.py)
 
 ```python
-# api/views.py - google_login_success 함수 수정
+from django.shortcuts import redirect
+from django.contrib.auth import login
+from allauth.socialaccount.models import SocialAccount
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Employee
+
 @api_view(['GET'])
 def google_login_success(request):
     """구글 로그인 성공 후 처리"""
@@ -514,8 +215,8 @@ def google_login_success(request):
             request.session['employee_role'] = employee.role
             request.session['employee_number'] = employee.employee_number
             
-            # Dashboard로 직접 리다이렉트 (기존 '/'에서 변경)
-            return redirect('/?dashboard=true')  # 쿼리 파라미터로 구분
+            # Dashboard로 리다이렉트
+            return redirect('/?dashboard=true')
             
         except SocialAccount.DoesNotExist:
             return redirect('/?error=social_account_not_found')
@@ -523,89 +224,74 @@ def google_login_success(request):
     return redirect('/?error=authentication_failed')
 ```
 
-#### 프론트엔드에서 Dashboard 우선 표시
-
-```tsx
-// client/src/App.tsx - Dashboard 우선 표시 로직 추가
-import { useLocation } from 'wouter';
-
-function App() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
-  
-  // URL 쿼리 파라미터 확인
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDashboardRedirect = urlParams.get('dashboard') === 'true';
-
-  // 인증된 경우의 라우팅
-  if (isAuthenticated) {
-    return (
-      <div className="min-h-screen w-full">
-        <Router>
-          <Header />
-          <main className="p-4">
-            <Switch>
-              {/* 구글 로그인 성공 후 Dashboard를 기본으로 표시 */}
-              <Route path="/" component={() => {
-                if (isDashboardRedirect || location === '/') {
-                  return <Dashboard />;
-                }
-                return <Dashboard />; // 기본적으로 Dashboard 표시
-              }} />
-              <Route path="/dashboard" component={Dashboard} />
-              <Route path="/menu1" component={Menu1} />
-              <Route path="/menu2" component={Menu2} />
-              <Route path="/menu3" component={Menu3} />
-              <Route path="/menu4" component={Menu4} />
-              <Route path="/settings" component={Settings} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </Router>
-      </div>
-    );
-  }
-
-  // 나머지 로직은 동일...
-}
-```
-
-### 11.3 Django settings.py 리다이렉트 설정 수정
+### 8. Django URL 패턴 추가 (api/urls.py)
 
 ```python
-# settings.py - 로그인 성공 후 리다이렉트 URL 수정
-LOGIN_REDIRECT_URL = '/?dashboard=true'  # Dashboard로 바로 이동
-LOGOUT_REDIRECT_URL = '/'
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # 기존 URL 패턴들...
+    path('auth/google/success/', views.google_login_success, name='google_login_success'),
+]
 ```
 
-### 11.4 완전한 자동화 흐름
+### 9. Employee 모델 수정 (필요한 경우)
 
-1. **사용자 첫 접속**: `http://localhost:5000`
-2. **인증 확인**: `isAuthenticated = false`
-3. **자동 리다이렉트**: `/accounts/google/login/`로 이동
-4. **구글 인증**: 구글 로그인 페이지에서 인증
-5. **Django 처리**: `google_login_success` 뷰에서 Employee 생성/업데이트
-6. **세션 저장**: Django 세션에 사용자 정보 저장
-7. **Dashboard 리다이렉트**: `/?dashboard=true`로 이동
-8. **프론트엔드**: `useAuth`가 인증 확인 후 Dashboard 표시
+Employee 모델에 email 필드가 없다면 추가:
 
-### 11.5 주의사항
+```python
+# api/models.py
+class Employee(models.Model):
+    username = models.CharField(max_length=255, unique=True)
+    email = models.EmailField(unique=True, null=True, blank=True)  # 추가 필요
+    role = models.CharField(max_length=50, default='EMPLOYEE')
+    department = models.CharField(max_length=100)
+    employee_number = models.CharField(max_length=50, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
 
-- **무한 리다이렉트 방지**: `isLoading` 상태를 정확히 확인하여 리다이렉트 중복 실행 방지
-- **브라우저 뒤로가기**: 구글 로그인 중 뒤로가기를 누르면 다시 자동 리다이렉트 발생
-- **개발 환경**: 로컬 테스트 시 무한 리다이렉트가 발생할 수 있으니 브라우저 시크릿 모드 사용 권장
+마이그레이션 실행:
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
 
-## 12. 완성 체크리스트
+### 10. Django Admin에서 소셜 애플리케이션 설정
 
-- [ ] django-allauth 패키지 설치
-- [ ] settings.py에 OAuth 설정 추가
-- [ ] urls.py에 allauth URL 패턴 추가
-- [ ] 마이그레이션 실행
-- [ ] Django 관리자에서 소셜 애플리케이션 설정
-- [ ] Employee 모델에 email 필드 추가 (필요 시)
-- [ ] 프론트엔드에 구글 로그인 버튼 추가 (또는 자동 리다이렉트)
-- [ ] 구글 개발자 콘솔에서 리디렉션 URI 설정
-- [ ] 환경 변수 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET 설정
-- [ ] App.tsx에서 자동 리다이렉트 로직 구현 (선택사항)
-- [ ] Django에서 Dashboard 리다이렉트 설정 (선택사항)
-- [ ] 테스트 실행 및 확인
+1. `http://localhost:8000/admin/` 접속
+2. `Social applications` → `Add social application`
+3. 다음 정보 입력:
+   - Provider: Google
+   - Name: Google OAuth
+   - Client id: 구글 클라이언트 ID
+   - Secret key: 구글 클라이언트 시크릿
+   - Sites: `example.com` 선택
+
+### 11. 환경 변수 설정
+
+```bash
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+```
+
+### 12. 구글 개발자 콘솔에서 리디렉션 URI 설정
+
+승인된 리디렉션 URI에 추가:
+```
+https://your-domain.replit.dev/accounts/google/login/callback/
+```
+
+## 실행 순서
+
+1. 위 모든 설정 완료 후 서버 재시작
+2. `http://localhost:5000` 접속
+3. 자동으로 구글 로그인 페이지로 리다이렉트
+4. 구글 인증 완료 후 Dashboard 표시
+
+## 주의사항
+
+- 프록시 서버 설정을 반드시 수정해야 `/accounts/*` 요청이 Django로 전달됨
+- 환경 변수가 올바르게 설정되어야 함
+- HTTPS 환경에서만 정상 작동 (Replit은 기본 HTTPS 제공)
