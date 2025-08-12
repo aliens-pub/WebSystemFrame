@@ -59,6 +59,27 @@ def login_view(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def session_view(request):
+    """세션 기반 인증을 위한 엔드포인트 - SSO 통합인증용"""
+    employee_id = request.session.get('employee_id')
+    if not employee_id:
+        return Response({
+            'authenticated': False
+        })
+    
+    try:
+        employee = Employee.objects.get(id=employee_id)
+        return Response({
+            'authenticated': True,
+            'user': EmployeeSerializer(employee).data
+        })
+    except Employee.DoesNotExist:
+        return Response({
+            'authenticated': False
+        })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def current_user_view(request):
     employee_id = request.session.get('employee_id')
     if not employee_id:

@@ -18,7 +18,7 @@ import Permissions from "@/pages/settings/Permissions";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -31,10 +31,7 @@ function AppContent() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <LoginModal />;
-  }
-
+  // SSO 통합인증을 위해 LoginModal 완전 제거 - 바로 메인 화면 표시
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
