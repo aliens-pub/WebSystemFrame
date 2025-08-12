@@ -64,7 +64,10 @@ interface ColumnFilter {
 
 interface FilterState {
   searchTerm: string;
-  dateFilter: Date | undefined;
+  dateFilter: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
   columnFilters: ColumnFilter[];
 }
 
@@ -229,7 +232,10 @@ export default function Menu1() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<FilterState>({
     searchTerm: "",
-    dateFilter: undefined,
+    dateFilter: {
+      from: undefined,
+      to: undefined
+    },
     columnFilters: []
   });
 
@@ -276,12 +282,14 @@ export default function Menu1() {
       );
     }
 
-    // 날짜 필터
-    if (filters.dateFilter) {
-      const filterDate = format(filters.dateFilter, "yyyy-MM-dd");
-      filtered = filtered.filter(item =>
-        formatDate(item.submitted_at) === filterDate
-      );
+    // 날짜 범위 필터
+    if (filters.dateFilter.from || filters.dateFilter.to) {
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.submitted_at);
+        const fromMatch = !filters.dateFilter.from || itemDate >= filters.dateFilter.from;
+        const toMatch = !filters.dateFilter.to || itemDate <= filters.dateFilter.to;
+        return fromMatch && toMatch;
+      });
     }
 
     // 컬럼 필터
@@ -367,24 +375,101 @@ export default function Menu1() {
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+            <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {filters.dateFilter ? format(filters.dateFilter, "PPP", { locale: ko }) : "날짜 선택"}
+              {filters.dateFilter.from ? (
+                filters.dateFilter.to ? (
+                  `${format(filters.dateFilter.from, "yyyy-MM-dd")} ~ ${format(filters.dateFilter.to, "yyyy-MM-dd")}`
+                ) : (
+                  `From: ${format(filters.dateFilter.from, "yyyy-MM-dd")}`
+                )
+              ) : (
+                "날짜 범위 선택"
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 border-b">
+              <div className="text-sm font-medium mb-2">날짜 범위 선택</div>
+              <div className="text-xs text-gray-500 mb-2">
+                첫 번째 클릭: 시작일 / 두 번째 클릭: 종료일
+              </div>
+              <div className="flex gap-2 text-xs">
+                <div className="flex-1">
+                  <span className="text-gray-600">시작일:</span>
+                  <div className="font-mono">
+                    {filters.dateFilter.from ? format(filters.dateFilter.from, "yyyy-MM-dd") : "미선택"}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <span className="text-gray-600">종료일:</span>
+                  <div className="font-mono">
+                    {filters.dateFilter.to ? format(filters.dateFilter.to, "yyyy-MM-dd") : "미선택"}
+                  </div>
+                </div>
+              </div>
+            </div>
             <Calendar
               mode="single"
-              selected={filters.dateFilter}
-              onSelect={(date) => setFilters(prev => ({ ...prev, dateFilter: date }))}
+              selected={filters.dateFilter.from || filters.dateFilter.to}
+              onSelect={(date) => {
+                if (!date) return;
+                
+                setFilters(prev => {
+                  // 첫 번째 클릭: From 날짜 설정
+                  if (!prev.dateFilter.from) {
+                    return {
+                      ...prev,
+                      dateFilter: {
+                        from: date,
+                        to: undefined
+                      }
+                    };
+                  }
+                  // 두 번째 클릭: To 날짜 설정
+                  else if (!prev.dateFilter.to) {
+                    // To 날짜가 From 날짜보다 이전이면 From과 To를 바꿔서 설정
+                    if (date < prev.dateFilter.from) {
+                      return {
+                        ...prev,
+                        dateFilter: {
+                          from: date,
+                          to: prev.dateFilter.from
+                        }
+                      };
+                    } else {
+                      return {
+                        ...prev,
+                        dateFilter: {
+                          ...prev.dateFilter,
+                          to: date
+                        }
+                      };
+                    }
+                  }
+                  // 이미 둘 다 선택된 경우: 새로운 From 날짜로 리셋
+                  else {
+                    return {
+                      ...prev,
+                      dateFilter: {
+                        from: date,
+                        to: undefined
+                      }
+                    };
+                  }
+                });
+              }}
               initialFocus
             />
-            {filters.dateFilter && (
+            {(filters.dateFilter.from || filters.dateFilter.to) && (
               <div className="p-3 border-t">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setFilters(prev => ({ ...prev, dateFilter: undefined }))}
+                  onClick={() => setFilters(prev => ({ 
+                    ...prev, 
+                    dateFilter: { from: undefined, to: undefined } 
+                  }))}
                   className="w-full"
                 >
                   <X className="mr-2 h-4 w-4" />
