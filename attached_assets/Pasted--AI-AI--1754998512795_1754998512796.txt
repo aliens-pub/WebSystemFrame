@@ -1,0 +1,105 @@
+네, AI 에이전트가 요청하신 내용을 정확하고 효과적으로 수행할 수 있도록, 프로젝트의 코드베이스와 기술 스택을 고려하여 다음과 같이 상세한 프롬프트를 작성해 드립니다.
+
+AI 에이전트 코드 수정 요청 프롬프트
+역할: 당신은 React, TypeScript, Django 및 shadcn/ui 컴포넌트 라이브러리에 매우 능숙한 숙련된 풀스택 개발자입니다.
+
+목표: 현재 카드 리스트 형태로 되어 있는 client/src/pages/Menu1.tsx 파일을 데이터 테이블(Data Table) 형태로 리팩토링하고, 검색, 날짜 필터링, 컬럼별 필터 및 정렬, 담당자 지정 등 고급 기능을 추가합니다.
+
+세부 요구사항
+1. UI 레이아웃 변경
+현재 Menu1.tsx의 Card 컴포넌트 기반 리스트 UI를 shadcn/ui의 Table 컴포넌트를 사용한 데이터 테이블 그리드로 완전히 교체해주세요.
+
+페이지 제목(h1, "의뢰 상신 목록")과 설명(p)은 유지합니다.
+
+2. 검색 및 날짜 필터 기능 추가
+페이지 제목 아래, 데이터 테이블 위에 새로운 컨트롤 영역을 만듭니다.
+
+검색창:
+
+shadcn/ui의 Input 컴포넌트를 사용해 검색창을 추가합니다.
+
+사용자가 키워드를 입력하면, 테이블의 모든 컬럼을 대상으로 해당 키워드를 포함하는 행만 필터링하여 보여줍니다. (Client-side filtering)
+
+날짜 선택창:
+
+검색창 오른쪽에 shadcn/ui의 DatePicker (Calendar와 Popover 조합)를 추가합니다.
+
+사용자가 특정 날짜를 선택하면, '의뢰날짜' 컬럼에서 해당 날짜에 해당하는 행만 필터링합니다.
+
+캘린더는 <, > 아이콘으로 월(month) 단위 이동이 가능해야 합니다.
+
+3. 데이터 테이블 구현
+@tanstack/react-query의 useQuery를 사용하여 /api/request-submissions 엔드포인트에서 데이터를 가져오는 로직은 유지하되, 테이블에 맞게 데이터를 처리합니다.
+
+테이블 컬럼 (총 8개):
+
+Line ID
+
+PPID
+
+EQPID
+
+제목
+
+의뢰자
+
+의뢰날짜
+
+Status
+
+담당자
+
+참고: 현재 API 응답(RequestSubmission 타입)에 Line ID, PPID, EQPID, Status, 담당자 필드가 없습니다. 이 필드들은 UI에 우선 더미 데이터 또는 빈 값으로 표시하고, 실제 데이터가 추가될 것을 대비하여 확장 가능하게 구현해주세요.
+
+4. 컬럼 헤더 필터 기능
+제목을 제외한 모든 컬럼 헤더를 클릭하면 shadcn/ui의 DropdownMenu를 사용한 필터 옵션이 나타나야 합니다.
+
+드롭다운 메뉴는 Excel의 필터 기능과 유사하게 다음 기능을 포함해야 합니다.
+
+정렬: '오름차순 정렬', '내림차순 정렬' 옵션.
+
+검색: 드롭다운 내부에 작은 검색창을 두어 해당 컬럼의 값들을 필터링.
+
+체크박스 리스트: 해당 컬럼의 고유한 값들을 체크박스 리스트로 나열. 사용자가 특정 값들을 체크하고 '적용' 버튼을 누르면, 선택된 값들을 포함하는 행들만 테이블에 표시됩니다.
+
+적용/취소 버튼: 필터 변경사항을 적용하거나 취소하는 버튼.
+
+5. 테이블 셀(Cell) 동작 정의
+테이블의 모든 셀 내용은 기본적으로 수정 불가능하며, 사용자가 텍스트를 드래그하여 복사할 수 있어야 합니다.
+
+예외: 담당자 컬럼:
+
+담당자 컬럼의 각 셀은 클릭이 가능해야 합니다.
+
+셀을 클릭하면 shadcn/ui의 Select 또는 Combobox 컴포넌트를 사용한 드롭다운이 표시됩니다.
+
+드롭다운 목록에는 /api/emp-info 엔드포인트를 통해 가져온 직원 중 department가 "개발팀"인 직원들의 이름만 표시되어야 합니다.
+
+사용자가 드롭다운에서 특정 담당자를 선택하고 '적용' 버튼을 누르면, **useMutation**을 사용하여 해당 RequestSubmission의 담당자 정보를 서버에 업데이트해야 합니다. (예: PATCH /api/request-submissions/{id} 와 같은 API 호출)
+
+참고 코드 및 파일
+수정 대상 파일: client/src/pages/Menu1.tsx
+
+UI 컴포넌트: client/src/components/ui/ 디렉토리의 Table, Input, Calendar, Popover, DropdownMenu, Checkbox, Select, Command 컴포넌트를 적극 활용하세요.
+
+데이터 타입: shared/schema.ts의 타입을 참고하세요.
+
+API 호출: client/src/lib/queryClient.ts의 apiRequest 함수와 @tanstack/react-query 훅을 사용하세요.
+
+직원 데이터: /api/emp-info API를 호출하여 EmpInfo[] 타입의 데이터를 가져와 "개발팀" 소속 직원을 필터링하세요.
+
+기존 Menu1.tsx 코드:
+
+TypeScript
+
+// aliens-pub/websystemframe/WebSystemFrame-fb5f93a0920aa0cf48e8f11a92785b6db793b498/client/src/pages/Menu1.tsx
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FileText, Calendar, User, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+
+// ... (기존 코드 생략) ...
+위 요구사항에 맞춰 Menu1.tsx 파일을 수정해주세요. 최종 결과물은 기능적으로 완전하고, 코드 품질이 높으며, 유지보수가 용이해야 합니다.
