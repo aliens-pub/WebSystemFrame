@@ -423,3 +423,22 @@ def approval_roles_view(request):
             return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PATCH'])
+@permission_classes([AllowAny])
+def request_submission_detail_view(request, submission_id):
+    """특정 의뢰 상신의 정보 업데이트 (담당자 변경 등)"""
+    try:
+        submission = RequestSubmission.objects.get(id=submission_id)
+    except RequestSubmission.DoesNotExist:
+        return Response({'error': '해당 의뢰를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'PATCH':
+        try:
+            serializer = RequestSubmissionSerializer(submission, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

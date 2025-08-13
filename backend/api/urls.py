@@ -14,6 +14,7 @@ urlpatterns = [
     path('email-templates', views.email_template_list_view, name='email_template_list'),
     path('email-templates/<str:department>', views.email_template_detail_view, name='email_template_detail'),
     path('request-submissions', views.request_submission_view, name='request_submission'),
+    path('request-submissions/<int:submission_id>', views.request_submission_detail_view, name='request_submission_detail'),
     path('employees/update-roles', views.update_employee_roles_view, name='update_employee_roles'),
     path('approval-roles', views.approval_roles_view, name='approval_roles'),
 ]
