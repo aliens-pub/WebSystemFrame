@@ -345,7 +345,7 @@ export default function Menu1() {
       .map(item => item[column])
       .filter(value => value != null && value !== "")
       .map(value => String(value));
-    return [...new Set(values)].sort();
+    return Array.from(new Set(values)).sort();
   };
 
   return (
@@ -529,7 +529,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="submitted_by"
                   title="의뢰자"
-                  data={getColumnData('submitted_by')}
+                  data={getUniqueValues('submitted_by')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'submitted_by')}
                 />
@@ -538,7 +538,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="submitted_at"
                   title="의뢰날짜"
-                  data={getColumnData('submitted_at').map(date => formatDate(date))}
+                  data={getUniqueValues('submitted_at').map((date: any) => formatDate(date))}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'submitted_at')}
                 />
