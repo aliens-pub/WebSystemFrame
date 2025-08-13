@@ -36,6 +36,7 @@ interface RequestSubmission {
   line_id?: string;
   ppid?: string;
   eqpid?: string;
+  change_request_items?: string;
   status?: string;
   assignee?: string;
 }
@@ -345,6 +346,17 @@ export default function Menu1() {
         return Array.from({ length: 5 }, (_, i) => `PP-${String(i + 1).padStart(3, '0')}`);
       case 'eqpid':
         return Array.from({ length: 8 }, (_, i) => `EQP-${String(i + 1).padStart(3, '0')}`);
+      case 'change_request_items':
+        return [
+          '설정값 변경',
+          '프로세스 파라미터 조정',
+          '레시피 수정',
+          '알람 임계값 변경',
+          '운전 조건 변경',
+          '유지보수 스케줄 조정',
+          '센서 캘리브레이션',
+          '소프트웨어 업데이트'
+        ];
       case 'status':
         return ['대기중', '진행중', '완료', '보류'];
       default:
@@ -519,6 +531,15 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'eqpid')}
                 />
               </TableHead>
+              <TableHead className="w-[140px]">
+                <ColumnHeader
+                  column="change_request_items"
+                  title="변경의뢰 항목"
+                  data={getDummyData('change_request_items')}
+                  onFilterChange={handleColumnFilter}
+                  currentFilter={filters.columnFilters.find(f => f.column === 'change_request_items')}
+                />
+              </TableHead>
               <TableHead>제목</TableHead>
               <TableHead className="w-[120px]">
                 <ColumnHeader
@@ -557,6 +578,7 @@ export default function Menu1() {
                   <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -566,7 +588,7 @@ export default function Menu1() {
               ))
             ) : filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   <div className="text-gray-500">
                     검색 조건에 맞는 데이터가 없습니다.
                   </div>
@@ -583,6 +605,9 @@ export default function Menu1() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {submission.eqpid || `EQP-${String((submission.id % 8) + 1).padStart(3, '0')}`}
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-700">
+                    {submission.change_request_items || getDummyData('change_request_items')[submission.id % getDummyData('change_request_items').length]}
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate">
                     <span title={submission.title}>{submission.title}</span>
