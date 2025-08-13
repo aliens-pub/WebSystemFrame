@@ -7,8 +7,7 @@ class Employee(models.Model):
     ]
     
     username = models.CharField(max_length=150, unique=True)
-    employee_number = models.CharField(max_length=20, unique=True, verbose_name="사번")
-    auth = models.CharField(
+    role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
         default='ENGINEER'
@@ -20,23 +19,10 @@ class Employee(models.Model):
         db_table = 'employee'
     
     def save(self, *args, **kwargs):
-        # Auto-populate username from emp_info if employee_number matches emp_id
-        if self.employee_number:
-            try:
-                emp_info = EmpInfo.objects.get(emp_id=self.employee_number)
-                new_username = emp_info.name
-                # Check if this username already exists for a different employee
-                if Employee.objects.filter(username=new_username).exclude(pk=self.pk).exists():
-                    new_username = f"{emp_info.name}_{self.employee_number}"
-                self.username = new_username
-            except EmpInfo.DoesNotExist:
-                # If no matching emp_info, keep existing username or set to employee_number
-                if not self.username:
-                    self.username = self.employee_number
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"{self.username} ({self.employee_number}) - {self.role}"
+        return f"{self.username} - {self.role}"
 
 class EmpInfo(models.Model):
     name = models.CharField(max_length=100, verbose_name="직원 이름")
@@ -72,11 +58,27 @@ class EmailTemplate(models.Model):
         return f"{self.department} - {self.subject}"
 
 class RequestSubmission(models.Model):
+    STATUS_CHOICES = [
+        ('대기중', '대기중'),
+        ('진행중', '진행중'),
+        ('완료', '완료'),
+        ('보류', '보류'),
+    ]
+    
     department = models.CharField(max_length=100, verbose_name="부서")
     title = models.CharField(max_length=200, verbose_name="의뢰 제목", default="")
     content = models.TextField(verbose_name="의뢰 내용")
     submitted_by = models.CharField(max_length=100, verbose_name="상신자")
     submitted_at = models.DateTimeField(auto_now_add=True, verbose_name="상신 시간")
+    
+    # 새로 추가되는 컬럼들
+    line_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="Line ID")
+    ppid = models.CharField(max_length=50, blank=True, null=True, verbose_name="PPID")
+    eqpid = models.CharField(max_length=50, blank=True, null=True, verbose_name="EQPID")
+    change_request_items = models.CharField(max_length=200, blank=True, null=True, verbose_name="변경의뢰 항목")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='대기중', verbose_name="상태")
+    assignee = models.CharField(max_length=100, blank=True, null=True, verbose_name="담당자")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
