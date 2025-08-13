@@ -4,7 +4,7 @@ from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpAppr
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
-        fields = ['id', 'username', 'employee_number', 'auth', 'created_at', 'updated_at']
+        fields = ['id', 'username', 'role', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 class LoginSerializer(serializers.Serializer):
@@ -16,9 +16,9 @@ class LoginSerializer(serializers.Serializer):
         return value
 
 class UpdateRoleSerializer(serializers.Serializer):
-    auth = serializers.ChoiceField(choices=Employee.ROLE_CHOICES)
+    role = serializers.ChoiceField(choices=Employee.ROLE_CHOICES)
     
-    def validate_auth(self, value):
+    def validate_role(self, value):
         if value not in ['ENGINEER', 'MANAGER']:
             raise serializers.ValidationError("유효하지 않은 역할입니다.")
         return value
@@ -43,7 +43,9 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
 class RequestSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RequestSubmission
-        fields = ['id', 'department', 'title', 'content', 'submitted_by', 'submitted_at', 'created_at', 'updated_at']
+        fields = ['id', 'department', 'title', 'content', 'submitted_by', 'submitted_at', 
+                 'line_id', 'ppid', 'eqpid', 'change_request_items', 'status', 'assignee', 
+                 'created_at', 'updated_at']
         read_only_fields = ['id', 'submitted_at', 'created_at', 'updated_at']
 
 class EmpApprovalRoleSerializer(serializers.ModelSerializer):
