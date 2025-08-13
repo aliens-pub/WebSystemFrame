@@ -35,6 +35,10 @@ interface EmailTemplate {
 
 export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [selectedLineId, setSelectedLineId] = useState<string>("");
+  const [selectedPpid, setSelectedPpid] = useState<string>("");
+  const [selectedEqpid, setSelectedEqpid] = useState<string>("");
+  const [selectedChangeRequestItem, setSelectedChangeRequestItem] = useState<string>("");
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
@@ -42,6 +46,21 @@ export default function Menu2() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
+
+  // 드롭다운 옵션들
+  const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
+  const ppidOptions = Array.from({ length: 5 }, (_, i) => `PP-${String(i + 1).padStart(3, '0')}`);
+  const eqpidOptions = Array.from({ length: 8 }, (_, i) => `EQP-${String(i + 1).padStart(3, '0')}`);
+  const changeRequestItemOptions = [
+    '설정값 변경',
+    '프로세스 파라미터 조정',
+    '레시피 수정',
+    '알람 임계값 변경',
+    '운전 조건 변경',
+    '유지보수 스케줄 조정',
+    '센서 캘리브레이션',
+    '소프트웨어 업데이트'
+  ];
 
   // 부서 목록 조회 (기존 직원 정보에서 부서 추출)
   const { data: empInfos, isLoading: isDepartmentLoading, error } = useQuery<EmpInfo[]>({
@@ -82,6 +101,10 @@ export default function Menu2() {
       title: string;
       content: string;
       submitted_by: string;
+      line_id: string;
+      ppid: string;
+      eqpid: string;
+      change_request_items: string;
     }) => {
       const response = await fetch('/api/request-submissions', {
         method: 'POST',
@@ -107,6 +130,10 @@ export default function Menu2() {
       setRequestTitle("");
       setRequestContent("");
       setSelectedDepartment("");
+      setSelectedLineId("");
+      setSelectedPpid("");
+      setSelectedEqpid("");
+      setSelectedChangeRequestItem("");
     },
     onError: (error) => {
       toast({
@@ -141,12 +168,56 @@ export default function Menu2() {
     }
   }, [emailTemplate, selectedDepartment]);
 
+  // 4개 드롭다운 선택 시 자동 제목 생성
+  useEffect(() => {
+    if (selectedLineId && selectedPpid && selectedEqpid && selectedChangeRequestItem) {
+      const autoTitle = `[${selectedLineId}_${selectedPpid}_${selectedEqpid}_${selectedChangeRequestItem}]`;
+      setRequestTitle(autoTitle);
+    }
+  }, [selectedLineId, selectedPpid, selectedEqpid, selectedChangeRequestItem]);
+
   // 의뢰 상신 처리
   const handleSubmitRequest = () => {
     if (!selectedDepartment) {
       toast({
         title: "부서 선택 필요",
         description: "의뢰할 부서를 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedLineId) {
+      toast({
+        title: "Line ID 선택 필요",
+        description: "Line ID를 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedPpid) {
+      toast({
+        title: "PPID 선택 필요",
+        description: "PPID를 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedEqpid) {
+      toast({
+        title: "EQPID 선택 필요",
+        description: "EQPID를 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedChangeRequestItem) {
+      toast({
+        title: "변경 의뢰 항목 선택 필요",
+        description: "변경 의뢰 항목을 선택해주세요.",
         variant: "destructive",
       });
       return;
@@ -184,6 +255,10 @@ export default function Menu2() {
       title: requestTitle,
       content: requestContent,
       submitted_by: user.username,
+      line_id: selectedLineId,
+      ppid: selectedPpid,
+      eqpid: selectedEqpid,
+      change_request_items: selectedChangeRequestItem,
     });
   };
 
@@ -285,6 +360,75 @@ export default function Menu2() {
               </Popover>
             </div>
 
+            {/* 4개 드롭다운 선택 영역 */}
+            {selectedDepartment && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="line-id">Line ID</Label>
+                  <Select value={selectedLineId} onValueChange={setSelectedLineId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Line ID 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lineIdOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="ppid">PPID</Label>
+                  <Select value={selectedPpid} onValueChange={setSelectedPpid}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="PPID 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ppidOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="eqpid">EQPID</Label>
+                  <Select value={selectedEqpid} onValueChange={setSelectedEqpid}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="EQPID 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eqpidOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="change-request-item">변경 의뢰 항목</Label>
+                  <Select value={selectedChangeRequestItem} onValueChange={setSelectedChangeRequestItem}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="변경 의뢰 항목 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {changeRequestItemOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
             {/* 의뢰 제목 */}
             {selectedDepartment && (
               <div>
@@ -342,7 +486,15 @@ export default function Menu2() {
               <div className="flex justify-end">
                 <Button 
                   onClick={handleSubmitRequest}
-                  disabled={submitRequestMutation.isPending}
+                  disabled={
+                    submitRequestMutation.isPending ||
+                    !selectedLineId ||
+                    !selectedPpid ||
+                    !selectedEqpid ||
+                    !selectedChangeRequestItem ||
+                    !requestTitle.trim() ||
+                    !requestContent.trim()
+                  }
                   className="min-w-[120px]"
                 >
                   <Send className="mr-2 h-4 w-4" />

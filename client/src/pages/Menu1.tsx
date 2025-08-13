@@ -89,6 +89,7 @@ function ColumnHeader({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedValues, setSelectedValues] = useState<string[]>(currentFilter?.values || []);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>(currentFilter?.sortOrder);
+  const [isOpen, setIsOpen] = useState(false);
 
   const uniqueValues = Array.from(new Set(data.filter(Boolean))).sort();
   const filteredValues = uniqueValues.filter(value => 
@@ -97,16 +98,18 @@ function ColumnHeader({
 
   const handleApply = () => {
     onFilterChange(column, selectedValues, sortOrder);
+    setIsOpen(false); // 드롭다운 닫기
   };
 
   const handleClear = () => {
     setSelectedValues([]);
     setSortOrder(undefined);
     onFilterChange(column, [], undefined);
+    setIsOpen(false); // 드롭다운 닫기
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 data-[state=open]:bg-accent">
           {title}
@@ -337,31 +340,14 @@ export default function Menu1() {
     return submissionsData?.results.map(item => String(item[column] || "")) || [];
   };
 
-  const getDummyData = (column: string) => {
-    // 더미 데이터 생성
-    switch (column) {
-      case 'line_id':
-        return Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
-      case 'ppid':
-        return Array.from({ length: 5 }, (_, i) => `PP-${String(i + 1).padStart(3, '0')}`);
-      case 'eqpid':
-        return Array.from({ length: 8 }, (_, i) => `EQP-${String(i + 1).padStart(3, '0')}`);
-      case 'change_request_items':
-        return [
-          '설정값 변경',
-          '프로세스 파라미터 조정',
-          '레시피 수정',
-          '알람 임계값 변경',
-          '운전 조건 변경',
-          '유지보수 스케줄 조정',
-          '센서 캘리브레이션',
-          '소프트웨어 업데이트'
-        ];
-      case 'status':
-        return ['대기중', '진행중', '완료', '보류'];
-      default:
-        return [];
-    }
+  // 실제 데이터에서 고유값 추출하는 함수
+  const getUniqueValues = (column: keyof RequestSubmission) => {
+    if (!submissionsData?.results) return [];
+    const values = submissionsData.results
+      .map(item => item[column])
+      .filter(value => value != null && value !== "")
+      .map(value => String(value));
+    return [...new Set(values)].sort();
   };
 
   return (
@@ -508,7 +494,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="line_id"
                   title="Line ID"
-                  data={getDummyData('line_id')}
+                  data={getUniqueValues('line_id')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'line_id')}
                 />
@@ -517,7 +503,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="ppid"
                   title="PPID"
-                  data={getDummyData('ppid')}
+                  data={getUniqueValues('ppid')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'ppid')}
                 />
@@ -526,7 +512,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="eqpid"
                   title="EQPID"
-                  data={getDummyData('eqpid')}
+                  data={getUniqueValues('eqpid')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'eqpid')}
                 />
@@ -535,7 +521,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="change_request_items"
                   title="변경의뢰 항목"
-                  data={getDummyData('change_request_items')}
+                  data={getUniqueValues('change_request_items')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'change_request_items')}
                 />
@@ -563,7 +549,7 @@ export default function Menu1() {
                 <ColumnHeader
                   column="status"
                   title="Status"
-                  data={getDummyData('status')}
+                  data={getUniqueValues('status')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'status')}
                 />
