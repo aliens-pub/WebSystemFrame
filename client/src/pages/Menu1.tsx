@@ -336,9 +336,7 @@ export default function Menu1() {
   };
 
   // 컬럼별 데이터 추출
-  const getColumnData = (column: keyof RequestSubmission) => {
-    return submissionsData?.results.map(item => String(item[column] || "")) || [];
-  };
+
 
   // 실제 데이터에서 고유값 추출하는 함수
   const getUniqueValues = (column: keyof RequestSubmission) => {
@@ -584,16 +582,16 @@ export default function Menu1() {
               filteredData.map((submission) => (
                 <TableRow key={submission.id} className="hover:bg-gray-50">
                   <TableCell className="font-mono text-xs">
-                    {submission.line_id || `LINE-${String(submission.id).padStart(3, '0')}`}
+                    {submission.line_id || '-'}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {submission.ppid || `PP-${String((submission.id % 5) + 1).padStart(3, '0')}`}
+                    {submission.ppid || '-'}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {submission.eqpid || `EQP-${String((submission.id % 8) + 1).padStart(3, '0')}`}
+                    {submission.eqpid || '-'}
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">
-                    {submission.change_request_items || getDummyData('change_request_items')[submission.id % getDummyData('change_request_items').length]}
+                    {submission.change_request_items || '-'}
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate">
                     <span title={submission.title}>{submission.title}</span>
