@@ -9,6 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   CalendarIcon, 
   Search, 
@@ -17,7 +19,9 @@ import {
   ArrowUp, 
   ArrowDown,
   Check,
-  X
+  X,
+  Download,
+  Eye
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
@@ -242,6 +246,10 @@ export default function Menu1() {
     },
     columnFilters: []
   });
+  
+  // 모달 상태 관리
+  const [selectedSubmission, setSelectedSubmission] = useState<RequestSubmission | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 의뢰 상신 목록 조회
   const { data: submissionsData, isLoading } = useQuery<RequestSubmissionResponse>({
@@ -333,6 +341,59 @@ export default function Menu1() {
 
   const handleAssigneeChange = (id: number, assignee: string) => {
     updateAssigneeMutation.mutate({ id, assignee });
+  };
+
+  // 상세 보기 모달 핸들러
+  const handleRowClick = (submission: RequestSubmission) => {
+    setSelectedSubmission(submission);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedSubmission(null);
+  };
+
+  // CSV 다운로드 함수
+  const downloadCSV = () => {
+    if (!filteredData.length) return;
+
+    const headers = [
+      'Line ID',
+      'PPID', 
+      'EQPID',
+      '변경의뢰 항목',
+      '제목',
+      '상신자',
+      '의뢰날짜',
+      '상태',
+      '담당자'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...filteredData.map(submission => [
+        submission.line_id || '',
+        submission.ppid || '',
+        submission.eqpid || '',
+        `"${(submission.change_request_items || '').replace(/"/g, '""')}"`,
+        `"${(submission.title || '').replace(/"/g, '""')}"`,
+        submission.submitted_by || '',
+        formatDate(submission.submitted_at),
+        submission.status || '대기중',
+        submission.assignee || ''
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `의뢰상신목록_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // 컬럼별 데이터 추출
@@ -483,6 +544,19 @@ export default function Menu1() {
         )}
       </div>
 
+      {/* 다운로드 버튼 */}
+      <div className="mb-4 flex justify-end">
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={downloadCSV}
+          disabled={!filteredData.length}
+        >
+          <Download className="h-4 w-4" />
+          CSV 다운로드 ({filteredData.length}건)
+        </Button>
+      </div>
+
       {/* 데이터 테이블 */}
       <div className="border rounded-lg">
         <Table>
@@ -580,7 +654,11 @@ export default function Menu1() {
               </TableRow>
             ) : (
               filteredData.map((submission) => (
-                <TableRow key={submission.id} className="hover:bg-gray-50">
+                <TableRow 
+                  key={submission.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleRowClick(submission)}
+                >
                   <TableCell className="font-mono text-xs">
                     {submission.line_id || '-'}
                   </TableCell>
@@ -616,7 +694,7 @@ export default function Menu1() {
                       {submission.status || '대기중'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <AssigneeCell
                       submission={submission}
                       onAssigneeChange={handleAssigneeChange}
@@ -628,6 +706,113 @@ export default function Menu1() {
           </TableBody>
         </Table>
       </div>
+
+      {/* 상세 보기 모달 */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>의뢰 상신 상세 정보</DialogTitle>
+          </DialogHeader>
+          {selectedSubmission && (
+            <ScrollArea className="max-h-[80vh]">
+              <div className="space-y-6 p-4">
+                {/* 기본 정보 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Line ID</label>
+                    <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-sm">
+                      {selectedSubmission.line_id || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">PPID</label>
+                    <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-sm">
+                      {selectedSubmission.ppid || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">EQPID</label>
+                    <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-sm">
+                      {selectedSubmission.eqpid || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">변경의뢰 항목</label>
+                    <div className="mt-1 p-2 bg-gray-50 rounded text-sm">
+                      {selectedSubmission.change_request_items || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 제목 및 설명 */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">제목</label>
+                  <div className="mt-1 p-3 bg-gray-50 rounded text-sm">
+                    {selectedSubmission.title}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700">상세 설명</label>
+                  <div className="mt-1 p-3 bg-gray-50 rounded text-sm whitespace-pre-wrap">
+                    {selectedSubmission.description || '설명이 없습니다.'}
+                  </div>
+                </div>
+
+                {/* 상신 정보 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">상신자</label>
+                    <div className="mt-1">
+                      <Badge variant="outline">{selectedSubmission.submitted_by}</Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">상신일시</label>
+                    <div className="mt-1 p-2 bg-gray-50 rounded text-sm">
+                      {formatDate(selectedSubmission.submitted_at)}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">상태</label>
+                    <div className="mt-1">
+                      <Badge 
+                        variant={
+                          selectedSubmission.status === '완료' ? 'default' :
+                          selectedSubmission.status === '진행중' ? 'secondary' :
+                          'outline'
+                        }
+                      >
+                        {selectedSubmission.status || '대기중'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">담당자</label>
+                    <div className="mt-1">
+                      {selectedSubmission.assignee ? (
+                        <Badge variant="secondary">{selectedSubmission.assignee}</Badge>
+                      ) : (
+                        <span className="text-gray-500 text-sm">미지정</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 추가 정보 */}
+                {selectedSubmission.additional_info && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">추가 정보</label>
+                    <div className="mt-1 p-3 bg-gray-50 rounded text-sm whitespace-pre-wrap">
+                      {selectedSubmission.additional_info}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
