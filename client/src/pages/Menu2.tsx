@@ -8,9 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, FileText, Users, Check, ChevronsUpDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Editor } from '@tinymce/tinymce-react';
 
 interface EmpInfo {
   id: number;
@@ -42,6 +43,7 @@ export default function Menu2() {
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
+  const editorRef = useRef<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -146,7 +148,7 @@ export default function Menu2() {
 
   // 부서 목록 추출
   const departments = empInfos
-    ? [...new Set(empInfos.map(emp => emp.department))].sort()
+    ? Array.from(new Set(empInfos.map(emp => emp.department))).sort()
     : [];
 
   // 템플릿 로드 시 내용 설정
@@ -154,17 +156,33 @@ export default function Menu2() {
     if (emailTemplate && emailTemplate.content) {
       setRequestContent(emailTemplate.content);
     } else if (selectedDepartment) {
-      // 기본 템플릿
-      setRequestContent(`안녕하세요, ${selectedDepartment}입니다.
-
-아래와 같이 업무를 의뢰드립니다.
-
-■ 의뢰 내용: 
-■ 요청 기한: 
-■ 우선순위: 
-■ 참고사항: 
-
-감사합니다.`);
+      // 기본 템플릿을 HTML 형식으로 설정
+      const defaultTemplate = `
+        <p>안녕하세요, <strong>${selectedDepartment}</strong>입니다.</p>
+        <p>아래와 같이 업무를 의뢰드립니다.</p>
+        <table class="table-basic" style="width: 100%; margin: 16px 0;">
+          <tbody>
+            <tr>
+              <td style="background-color: #f2f2f2; font-weight: bold; width: 120px;">■ 의뢰 내용</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td style="background-color: #f2f2f2; font-weight: bold;">■ 요청 기한</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td style="background-color: #f2f2f2; font-weight: bold;">■ 우선순위</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td style="background-color: #f2f2f2; font-weight: bold;">■ 참고사항</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>감사합니다.</p>
+      `;
+      setRequestContent(defaultTemplate);
     }
   }, [emailTemplate, selectedDepartment]);
 
@@ -175,6 +193,13 @@ export default function Menu2() {
       setRequestTitle(autoTitle);
     }
   }, [selectedLineId, selectedPpid, selectedEqpid, selectedChangeRequestItem]);
+
+  // HTML에서 텍스트 내용만 추출하는 함수
+  const getTextFromHtml = (html: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  };
 
   // 의뢰 상신 처리
   const handleSubmitRequest = () => {
@@ -232,7 +257,7 @@ export default function Menu2() {
       return;
     }
 
-    if (!requestContent.trim()) {
+    if (!getTextFromHtml(requestContent).trim()) {
       toast({
         title: "내용 입력 필요",
         description: "의뢰 내용을 입력해주세요.",
@@ -451,19 +476,65 @@ export default function Menu2() {
                 {isTemplateLoading ? (
                   <Skeleton className="h-80 w-full" />
                 ) : (
-                  <Textarea
-                    id="request-content"
-                    value={requestContent}
-                    onChange={(e) => setRequestContent(e.target.value)}
-                    placeholder="의뢰 내용을 입력하세요"
-                    className="min-h-[400px]"
-                  />
+                  <div className="border rounded-md">
+                    <Editor
+                      onInit={(evt: any, editor: any) => editorRef.current = editor}
+                      value={requestContent}
+                      onEditorChange={(content: string) => setRequestContent(content)}
+                      init={{
+                        height: 400,
+                        menubar: false,
+                        plugins: [
+                          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                          'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                        ],
+                        toolbar: 'undo redo | blocks | ' +
+                          'bold italic forecolor | alignleft aligncenter ' +
+                          'alignright alignjustify | bullist numlist outdent indent | ' +
+                          'table | image | removeformat | help',
+                        table_toolbar: 'tableprops tabledelete | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol',
+                        table_appearance_options: false,
+                        table_grid: false,
+                        table_class_list: [
+                          {title: '기본 표', value: 'table-basic'},
+                          {title: '줄무늬 표', value: 'table-striped'},
+                          {title: '테두리 표', value: 'table-bordered'}
+                        ],
+                        image_advtab: true,
+                        image_caption: true,
+                        image_list: [
+                          {title: '샘플 이미지 1', value: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzNzNkYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuyCmO2UjCDsnbTrr7jsp4AgMTwvdGV4dD4KICA8L3N2Zz4='},
+                          {title: '샘플 이미지 2', value: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzEwYjk4MSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuyCmO2UjCDsnbTrr7jsp4AgMjwvdGV4dD4KICA8L3N2Zz4='}
+                        ],
+                        content_style: `
+                          body { font-family:Helvetica,Arial,sans-serif; font-size:14px; }
+                          .table-basic { border-collapse: collapse; width: 100%; }
+                          .table-basic th, .table-basic td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                          .table-basic th { background-color: #f2f2f2; font-weight: bold; }
+                          .table-striped { border-collapse: collapse; width: 100%; }
+                          .table-striped th, .table-striped td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                          .table-striped th { background-color: #f2f2f2; font-weight: bold; }
+                          .table-striped tr:nth-child(even) { background-color: #f9f9f9; }
+                          .table-bordered { border-collapse: collapse; width: 100%; border: 2px solid #333; }
+                          .table-bordered th, .table-bordered td { border: 1px solid #333; padding: 8px; text-align: left; }
+                          .table-bordered th { background-color: #f2f2f2; font-weight: bold; }
+                        `,
+                        placeholder: '의뢰 내용을 입력하세요. 표 삽입은 상단 메뉴에서 가능합니다.',
+                        branding: false,
+                        resize: false,
+                        statusbar: false
+                      }}
+                    />
+                  </div>
                 )}
                 <p className="text-sm text-gray-500 mt-2">
                   {emailTemplate
                     ? `${selectedDepartment}의 저장된 템플릿을 불러왔습니다. 필요에 따라 수정하세요.`
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
+                  <br />
+                  <span className="text-blue-600">표 삽입, 이미지 삽입, 텍스트 서식 등의 기능을 사용할 수 있습니다.</span>
                 </p>
               </div>
             )}
@@ -493,7 +564,7 @@ export default function Menu2() {
                     !selectedEqpid ||
                     !selectedChangeRequestItem ||
                     !requestTitle.trim() ||
-                    !requestContent.trim()
+                    !getTextFromHtml(requestContent).trim()
                   }
                   className="min-w-[120px]"
                 >
