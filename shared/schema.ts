@@ -33,3 +33,21 @@ export const systemStatsSchema = z.object({
 });
 
 export type SystemStats = z.infer<typeof systemStatsSchema>;
+
+// Request Submission schema
+export const requestSubmissionSchema = z.object({
+  id: z.number(),
+  department: z.string(),
+  title: z.string(),
+  content: z.string(),
+  submitted_by: z.string(),
+  submitted_at: z.string(),
+  line_id: z.string().nullable(),
+  ppid: z.string().nullable(),
+  eqpid: z.string().nullable(),
+  change_request_items: z.string().nullable(),
+  status: z.string(),
+  assignee: z.string().nullable(),
+});
+
+export type RequestSubmission = z.infer<typeof requestSubmissionSchema>;
