@@ -46,6 +46,48 @@ export default function Menu2() {
   const [open, setOpen] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
 
+  // 클립보드 이미지 처리
+  const handlePaste = (event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        event.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const base64 = e.target?.result as string;
+            const quill = quillRef.current?.getEditor();
+            if (quill) {
+              const range = quill.getSelection();
+              if (range) {
+                quill.insertEmbed(range.index, 'image', base64);
+              }
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
+  };
+
+  // 에디터 마운트 시 paste 이벤트 리스너 등록
+  useEffect(() => {
+    const editor = quillRef.current?.getEditor();
+    if (editor) {
+      const editorElement = editor.root;
+      editorElement.addEventListener('paste', handlePaste as EventListener);
+      
+      return () => {
+        editorElement.removeEventListener('paste', handlePaste as EventListener);
+      };
+    }
+  }, [quillRef.current]);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
@@ -458,37 +500,20 @@ export default function Menu2() {
                     theme="snow"
                     value={requestContent}
                     onChange={setRequestContent}
-                    placeholder="의뢰 내용을 입력하세요. 표 삽입 및 이미지 삽입이 가능합니다."
+                    placeholder="의뢰 내용을 입력하세요. 이미지를 복사해서 붙여넣기할 수 있습니다."
                     modules={{
-                      toolbar: {
-                        container: [
-                          [{ 'header': [1, 2, 3, false] }],
-                          ['bold', 'italic', 'underline', 'strike'],
-                          [{ 'color': [] }, { 'background': [] }],
-                          [{ 'align': [] }],
-                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                          ['blockquote', 'code-block'],
-                          ['link', 'image'],
-                          ['clean']
-                        ],
-                        handlers: {
-                          image: function() {
-                            const range = this.quill.getSelection();
-                            const value = prompt('이미지 URL을 입력하세요:');
-                            if (value && range) {
-                              this.quill.insertEmbed(range.index, 'image', value, 'user');
-                            }
-                          }
-                        }
-                      },
+                      toolbar: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'image']
+                      ],
                       clipboard: {
                         matchVisual: false,
                       }
                     }}
                     formats={[
-                      'header', 'bold', 'italic', 'underline', 'strike',
-                      'color', 'background', 'align', 'list', 'bullet',
-                      'blockquote', 'code-block', 'link', 'image'
+                      'bold', 'italic', 'underline', 
+                      'list', 'bullet', 'link', 'image'
                     ]}
                     style={{ minHeight: '400px' }}
                   />
@@ -499,7 +524,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">텍스트 서식, 목록, 링크, 이미지 삽입 등의 기능을 사용할 수 있습니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지를 복사해서 붙여넣기할 수 있습니다.</span>
                 </p>
               </div>
             )}
