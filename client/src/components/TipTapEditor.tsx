@@ -44,10 +44,13 @@ export default function TipTapEditor({ content, onChange, placeholder, className
         resizable: true,
         allowTableNodeSelection: true,
         cellMinWidth: 100,
+        handleWidth: 5,
       }),
       TableRow,
       TableHeader,
-      TableCell,
+      TableCell.configure({
+        // Enable direct content editing in cells
+      }),
       Image.configure({
         inline: true,
         allowBase64: true,
@@ -171,6 +174,30 @@ export default function TipTapEditor({ content, onChange, placeholder, className
       editor.commands.setContent(content)
     }
   }, [content, editor])
+
+  // Add event listeners for table cell editing
+  useEffect(() => {
+    if (!editor) return
+
+    const handleCellClick = (event: Event) => {
+      const target = event.target as HTMLElement
+      if (target.tagName === 'TD' || target.tagName === 'TH') {
+        // Position cursor in the clicked cell
+        const pos = editor.view.posAtDOM(target, 0)
+        if (pos >= 0) {
+          editor.commands.setTextSelection(pos)
+          editor.commands.focus()
+        }
+      }
+    }
+
+    const editorElement = editor.view.dom
+    editorElement.addEventListener('click', handleCellClick)
+
+    return () => {
+      editorElement.removeEventListener('click', handleCellClick)
+    }
+  }, [editor])
 
   const addImage = useCallback(() => {
     const url = window.prompt('이미지 URL을 입력하세요:')
@@ -370,11 +397,24 @@ export default function TipTapEditor({ content, onChange, placeholder, className
       </div>
 
       {/* Editor */}
-      <EditorContent 
-        editor={editor} 
-        className="min-h-[300px]"
-        placeholder={placeholder}
-      />
+      <div
+        onClick={(e) => {
+          const target = e.target as HTMLElement
+          if (target.tagName === 'TD' || target.tagName === 'TH') {
+            // Enable direct editing in table cells
+            editor?.commands.focus()
+            setTimeout(() => {
+              target.focus()
+            }, 10)
+          }
+        }}
+      >
+        <EditorContent 
+          editor={editor} 
+          className="min-h-[300px]"
+          placeholder={placeholder}
+        />
+      </div>
     </div>
   )
 }
