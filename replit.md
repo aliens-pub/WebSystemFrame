@@ -118,6 +118,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
+- August 15, 2025: 대규모 패키지 최적화 완료 - 사용하지 않는 218개 패키지 제거 (Google Cloud, Passport 인증, Uppy 파일 업로드, Framer Motion, Recharts, React Icons 등), TipTapEditor.tsx 파일 삭제, CKEditor5 개별 플러그인 제거, package.json 130→93라인으로 축소, 프로젝트 용량 대폭 감소
 - August 15, 2025: CKEditor5 리치 텍스트 에디터 완전 구현 - TipTap에서 CKEditor5 Decoupled Document 빌드로 최종 전환, Excel 표 붙여넣기 시 구조 완벽 보존, 표 셀 직접 편집 기능, 행/열 추가/삭제/병합, 이미지 업로드 어댑터, Office 문서 붙여넣기 지원, 분리된 툴바 구조로 전문적 UI 제공, TipTap 관련 파일 및 패키지 완전 정리
 - August 15, 2025: Menu2 리치 텍스트 에디터 최적화 완료 - React Quill로 교체, 클립보드 이미지 붙여넣기 기능 구현 (Base64 변환), better-table 모듈 제거로 안정성 향상, 기본 표 기능 제공
 - August 15, 2025: Excel 표 편집 문제 완전 해결 - Menu2에서 Excel 표 붙여넣기 시 편집 가능한 텍스트 형식으로 변환, 헤더와 데이터 행 구분, 파이프(|) 문자로 컬럼 구분하여 가독성 향상, React Quill 표 편집 제약 우회
