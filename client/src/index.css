@@ -112,7 +112,7 @@
   position: absolute;
   content: "";
   left: 0; right: 0; top: 0; bottom: 0;
-  background: rgba(200, 200, 255, 0.4);
+  background: rgba(59, 130, 246, 0.15);
   pointer-events: none;
 }
 
@@ -122,13 +122,40 @@
   top: 0;
   bottom: 0;
   width: 4px;
-  background-color: #adf;
+  background-color: hsl(var(--primary));
   pointer-events: none;
 }
 
 .prose table.resize-cursor {
   cursor: ew-resize;
   cursor: col-resize;
+}
+
+/* Enhanced table cell editing */
+.prose table td:hover,
+.prose table th:hover {
+  background-color: hsl(var(--muted)) / 0.5;
+  cursor: text;
+}
+
+.prose table td:focus,
+.prose table th:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+  background-color: hsl(var(--background));
+}
+
+/* Table editing focus styles */
+.prose table td[contenteditable="true"]:focus,
+.prose table th[contenteditable="true"]:focus {
+  background-color: hsl(var(--background));
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+}
+
+/* Table row selection */
+.prose table tr:hover {
+  background-color: hsl(var(--muted)) / 0.3;
 }
 
 /* Image styles */

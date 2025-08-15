@@ -36,10 +36,14 @@ interface TipTapEditorProps {
 export default function TipTapEditor({ content, onChange, placeholder, className }: TipTapEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        // Disable the default link extension from StarterKit to avoid conflicts
+        link: false,
+      }),
       Table.configure({
         resizable: true,
         allowTableNodeSelection: true,
+        cellMinWidth: 100,
       }),
       TableRow,
       TableHeader,
@@ -67,6 +71,8 @@ export default function TipTapEditor({ content, onChange, placeholder, className
     editorProps: {
       attributes: {
         class: `prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] p-4 border border-input rounded-md ${className || ''}`,
+        contenteditable: 'true',
+        spellcheck: 'false',
       },
       handlePaste: (view, event, slice) => {
         const clipboardData = event.clipboardData
@@ -107,22 +113,48 @@ export default function TipTapEditor({ content, onChange, placeholder, className
               .insertTable({ rows, cols, withHeaderRow: true })
               .run()
 
-            // Fill table with data
+            // Fill table with data using HTML insertion method for better reliability
             setTimeout(() => {
-              tableData.forEach((rowData, rowIndex) => {
-                rowData.forEach((cellData, colIndex) => {
-                  if (cellData) {
-                    editor?.chain()
-                      .focus()
-                      .setCellSelection({ 
-                        anchorCell: rowIndex * cols + colIndex,
-                        headCell: rowIndex * cols + colIndex 
-                      })
-                      .insertContent(cellData)
-                      .run()
+              if (editor) {
+                // Create HTML table with the data
+                let tableHTML = '<table><tbody>'
+                
+                tableData.forEach((rowData, rowIndex) => {
+                  const isHeader = rowIndex === 0
+                  tableHTML += '<tr>'
+                  
+                  for (let colIndex = 0; colIndex < cols; colIndex++) {
+                    const cellData = rowData[colIndex] || ''
+                    const tag = isHeader ? 'th' : 'td'
+                    tableHTML += `<${tag}>${cellData}</${tag}>`
+                  }
+                  
+                  tableHTML += '</tr>'
+                })
+                
+                tableHTML += '</tbody></table>'
+                
+                // Replace the empty table with populated one
+                const { state } = editor
+                const { selection } = state
+                
+                // Find the table node
+                let tablePos = -1
+                state.doc.descendants((node, pos) => {
+                  if (node.type.name === 'table') {
+                    tablePos = pos
+                    return false
                   }
                 })
-              })
+                
+                if (tablePos >= 0) {
+                  // Delete the empty table and insert the populated one
+                  editor.chain()
+                    .deleteTable()
+                    .insertContent(tableHTML)
+                    .run()
+                }
+              }
             }, 100)
           }
           return true
