@@ -73,143 +73,57 @@
   --sidebar-ring: hsl(217.2, 91.2%, 59.8%);
 }
 
-/* TipTap Editor 커스텀 스타일 */
-.prose {
-  max-width: none;
+/* CKEditor5 커스텀 스타일 */
+.ck-editor {
+  border: none;
 }
 
-.prose table {
+.ck-toolbar {
+  border: none !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  background: hsl(var(--muted)) !important;
+}
+
+.ck-content {
+  border: none !important;
+  min-height: 400px;
+  padding: 1rem;
+}
+
+.ck-content table {
   border-collapse: collapse;
   width: 100%;
   margin: 16px 0;
   border: 1px solid hsl(var(--border));
-  border-radius: 6px;
-  overflow: hidden;
 }
 
-.prose table td,
-.prose table th {
+.ck-content table td,
+.ck-content table th {
   border: 1px solid hsl(var(--border));
   padding: 8px 12px;
   text-align: left;
-  position: relative;
   vertical-align: top;
 }
 
-.prose table th {
+.ck-content table th {
   background-color: hsl(var(--muted));
   font-weight: 600;
-  color: hsl(var(--foreground));
 }
 
-.prose table td {
-  background-color: hsl(var(--background));
-}
-
-/* TipTap table selection styles */
-.prose .selectedCell:after {
-  z-index: 2;
-  position: absolute;
-  content: "";
-  left: 0; right: 0; top: 0; bottom: 0;
-  background: rgba(59, 130, 246, 0.15);
-  pointer-events: none;
-}
-
-.prose table .column-resize-handle {
-  position: absolute;
-  right: -2px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: hsl(var(--primary));
-  pointer-events: none;
-}
-
-.prose table.resize-cursor {
-  cursor: ew-resize;
-  cursor: col-resize;
-}
-
-/* Enhanced table cell editing */
-.prose table td,
-.prose table th {
-  cursor: text;
-  min-height: 20px;
-}
-
-.prose table td:hover,
-.prose table th:hover {
-  background-color: hsl(var(--muted)) / 0.5;
-  cursor: text;
-}
-
-.prose table td:focus,
-.prose table th:focus,
-.prose table td:focus-within,
-.prose table th:focus-within {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: -2px;
-  background-color: hsl(var(--background));
-  cursor: text;
-}
-
-/* Ensure table cells are editable */
-.prose table td p,
-.prose table th p {
-  margin: 0;
-  padding: 0;
-  min-height: 1em;
-  cursor: text;
-}
-
-.prose table td:empty::before,
-.prose table th:empty::before {
-  content: '\00A0';
-  color: transparent;
-}
-
-/* Table row selection */
-.prose table tr:hover {
-  background-color: hsl(var(--muted)) / 0.3;
-}
-
-/* Make sure tables are interactive */
-.prose table {
-  pointer-events: auto;
-}
-
-.prose table td,
-.prose table th {
-  pointer-events: auto;
-  user-select: text;
-}
-
-/* Image styles */
-.prose img {
+.ck-content img {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
-  border: 1px solid hsl(var(--border));
 }
 
-/* Link styles */
-.prose a {
+.ck-content a {
   color: hsl(var(--primary));
   text-decoration: underline;
 }
 
-.prose a:hover {
-  color: hsl(var(--primary)) / 0.8;
-}
-
-/* List styles */
-.prose ul, .prose ol {
+.ck-content ul,
+.ck-content ol {
   padding-left: 1.5rem;
-}
-
-.prose li {
-  margin: 0.25rem 0;
 }
 
 @layer base {
