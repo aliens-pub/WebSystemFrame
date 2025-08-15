@@ -87,7 +87,7 @@ export function CKEditor5Component({ content, onChange, placeholder }: CKEditor5
       {/* Editor container */}
       <div className="min-h-[400px] p-4">
         <CKEditor
-          editor={DecoupledEditor}
+          editor={DecoupledEditor as any}
           config={editorConfiguration}
           data={content}
           onReady={(editor) => {
