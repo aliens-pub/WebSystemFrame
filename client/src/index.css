@@ -182,6 +182,42 @@
   padding-top: 8px;
 }
 
+/* Custom React Quill table button styling */
+.ql-toolbar .ql-table-insert {
+  width: 28px;
+  height: 28px;
+}
+
+.ql-toolbar .ql-table-insert:before {
+  content: '⊞';
+  font-size: 14px;
+  color: #444;
+  font-weight: bold;
+}
+
+.ql-toolbar .ql-table-insert:hover:before {
+  color: #06c;
+}
+
+/* Enhanced table styling in Quill editor */
+.ql-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.ql-editor table td,
+.ql-editor table th {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+.ql-editor table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
 @layer base {
   * {
     @apply border-border;

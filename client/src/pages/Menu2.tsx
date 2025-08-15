@@ -83,7 +83,7 @@ export default function Menu2() {
       const lines = textData.split('\n').filter(line => line.trim());
       if (lines.length > 1 && lines.some(line => line.includes('\t'))) {
         // 탭으로 구분된 데이터를 HTML 표로 변환
-        let tableHtml = '<table border="1" style="border-collapse: collapse; width: 100%;"><tbody>';
+        let tableHtml = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;"><tbody>';
         
         lines.forEach((line, index) => {
           const cells = line.split('\t');
@@ -91,7 +91,8 @@ export default function Menu2() {
             tableHtml += '<tr>';
             cells.forEach(cell => {
               const tag = index === 0 ? 'th' : 'td';
-              tableHtml += `<${tag} style="border: 1px solid #ccc; padding: 8px;">${cell.trim()}</${tag}>`;
+              const bgColor = index === 0 ? 'background-color: #f5f5f5; font-weight: bold;' : '';
+              tableHtml += `<${tag} style="border: 1px solid #ccc; padding: 8px; ${bgColor}">${cell.trim()}</${tag}>`;
             });
             tableHtml += '</tr>';
           }
@@ -126,6 +127,53 @@ export default function Menu2() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
+
+  // 표 삽입 기능
+  const insertTable = () => {
+    const quill = quillRef.current?.getEditor();
+    if (quill) {
+      const range = quill.getSelection();
+      if (range) {
+        const tableHtml = `
+          <table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">헤더 1</th>
+                <th style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">헤더 2</th>
+                <th style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">헤더 3</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #ccc; padding: 8px;">셀 1</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">셀 2</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">셀 3</td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #ccc; padding: 8px;">셀 4</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">셀 5</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">셀 6</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><br></p>
+        `;
+        quill.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
+      }
+    }
+  };
+
+  // React Quill 에디터 커스터마이징
+  useEffect(() => {
+    const quillEditor = quillRef.current?.getEditor();
+    if (quillEditor) {
+      // 커스텀 툴바 버튼 등록
+      const toolbar = quillEditor.getModule('toolbar');
+      if (toolbar) {
+        toolbar.addHandler('table-insert', insertTable);
+      }
+    }
+  }, []);
 
   // 드롭다운 옵션들
   const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
@@ -540,7 +588,8 @@ export default function Menu2() {
                       toolbar: [
                         ['bold', 'italic', 'underline'],
                         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'image']
+                        ['link', 'image'],
+                        ['table-insert']
                       ],
                       clipboard: {
                         matchVisual: false,
@@ -559,7 +608,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표 삽입을 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다.</span>
                 </p>
               </div>
             )}

@@ -118,6 +118,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## Changelog
 
 Changelog:
+- August 15, 2025: 전문 풀스택 개발자 요청 완료 - Menu1 테이블 UI 완전 최적화(가로 스크롤 제거, 반응형 컬럼 너비, 텍스트 truncate), Menu2 Excel 표 붙여넣기 고급 기능 구현(첫 행 헤더 자동 인식, 스타일링 개선, 표 삽입 버튼 추가), quill-better-table 모듈 제거로 안정성 향상
 - August 15, 2025: Menu1 삭제 기능 및 테이블 최적화, Menu2 표 붙여넣기 기능 추가 - Menu1에 본인 작성 의뢰 삭제 기능 구현, 테이블 컬럼 너비 최적화로 횡스크롤 제거, Menu2에 엑셀 표 복사 붙여넣기 기능 추가 (탭 구분 텍스트를 HTML 테이블로 자동 변환)
 - August 15, 2025: Menu2 리치 텍스트 에디터 최적화 완료 - React Quill로 교체, 클립보드 이미지 붙여넣기 기능 구현 (Base64 변환), better-table 모듈 제거로 안정성 향상, 기본 표 기능 제공
 - July 26, 2025: Employee number authentication system 구현 완료 - employee 테이블에 employee_number 컬럼 추가, 기존 레코드들에 EMP 형식 사번 할당, 로그인 시스템을 사번 기반으로 변경, emp_info 테이블과 연동한 자동 사용자명 동기화 기능 추가, 프론트엔드 로그인 폼을 사번 입력으로 변경
