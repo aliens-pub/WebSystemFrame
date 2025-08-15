@@ -113,12 +113,13 @@ export default function Menu2() {
     }
   };
 
-  // Quill 모듈 설정
+  // Quill 모듈 설정 (간단한 포맷팅만 지원)
   const modules = {
     toolbar: [
       ['bold', 'italic', 'underline'],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'image']
+      ['link', 'image'],
+      ['clean']
     ],
     clipboard: {
       matchVisual: false,
