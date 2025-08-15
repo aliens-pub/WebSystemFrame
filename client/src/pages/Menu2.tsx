@@ -11,8 +11,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+// @ts-ignore
+import QuillBetterTable from 'quill-better-table';
+import 'quill-better-table/dist/quill-better-table.css';
+
+// Quill에 Better Table 모듈 등록
+Quill.register('modules/better-table', QuillBetterTable);
 
 interface EmpInfo {
   id: number;
@@ -505,15 +511,63 @@ export default function Menu2() {
                       toolbar: [
                         ['bold', 'italic', 'underline'],
                         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'image']
+                        ['link', 'image'],
+                        [
+                          {
+                            'better-table': [
+                              'insert-table',
+                              'insert-row-above',
+                              'insert-row-below',
+                              'insert-column-left', 
+                              'insert-column-right',
+                              'delete-row',
+                              'delete-column',
+                              'delete-table'
+                            ]
+                          }
+                        ]
                       ],
+                      'better-table': {
+                        operationMenu: {
+                          items: {
+                            unmergeCells: {
+                              text: '셀 분할'
+                            },
+                            mergeCells: {
+                              text: '셀 병합'
+                            },
+                            insertColumnLeft: {
+                              text: '왼쪽에 열 삽입'
+                            },
+                            insertColumnRight: {
+                              text: '오른쪽에 열 삽입'
+                            },
+                            insertRowAbove: {
+                              text: '위에 행 삽입'
+                            },
+                            insertRowBelow: {
+                              text: '아래에 행 삽입'
+                            },
+                            deleteColumn: {
+                              text: '열 삭제'
+                            },
+                            deleteRow: {
+                              text: '행 삭제'
+                            },
+                            deleteTable: {
+                              text: '표 삭제'
+                            }
+                          }
+                        }
+                      },
                       clipboard: {
                         matchVisual: false,
                       }
                     }}
                     formats={[
                       'bold', 'italic', 'underline', 
-                      'list', 'bullet', 'link', 'image'
+                      'list', 'bullet', 'link', 'image',
+                      'better-table'
                     ]}
                     style={{ minHeight: '400px' }}
                   />
@@ -524,7 +578,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지를 복사해서 붙여넣기할 수 있습니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표 편집을 사용할 수 있고, 이미지를 복사해서 붙여넣기할 수 있습니다. 표를 우클릭하면 편집 메뉴가 나타납니다.</span>
                 </p>
               </div>
             )}
