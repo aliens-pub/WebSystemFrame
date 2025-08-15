@@ -8,11 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, FileText, Users, Check, ChevronsUpDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import TipTapEditor from "@/components/TipTapEditor";
 
 interface EmpInfo {
   id: number;
@@ -44,109 +43,10 @@ export default function Menu2() {
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
-  const quillRef = useRef<ReactQuill>(null);
-
-  // 클립보드 Excel 표 처리 함수
-  const handleExcelPaste = (event: ClipboardEvent) => {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    // 이미지 처리
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.type.indexOf('image') !== -1) {
-        event.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const base64 = e.target?.result as string;
-            const quill = quillRef.current?.getEditor();
-            if (quill) {
-              const range = quill.getSelection();
-              if (range) {
-                quill.insertEmbed(range.index, 'image', base64);
-              }
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-        return;
-      }
-    }
-
-    // 탭으로 구분된 표 데이터 처리
-    const textData = event.clipboardData?.getData('text/plain');
-    if (textData && textData.includes('\t')) {
-      event.preventDefault();
-      
-      const lines = textData.split('\n').filter(line => line.trim());
-      if (lines.length > 1 && lines.some(line => line.includes('\t'))) {
-        // 탭으로 구분된 데이터를 HTML 표로 변환
-        const tableData = lines.map(line => line.split('\t').map(cell => cell.trim()));
-        const maxCols = Math.max(...tableData.map(row => row.length));
-        
-        let tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 10px 0; border: 1px solid #ccc;"><tbody>';
-        
-        tableData.forEach((rowData, rowIndex) => {
-          tableHtml += '<tr>';
-          for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-            const cellData = rowData[colIndex] || '';
-            const isHeader = rowIndex === 0;
-            const tag = isHeader ? 'th' : 'td';
-            const style = `border: 1px solid #ccc; padding: 8px; ${isHeader ? 'background-color: #f5f5f5; font-weight: bold;' : ''}`;
-            tableHtml += `<${tag} style="${style}">${cellData}</${tag}>`;
-          }
-          tableHtml += '</tr>';
-        });
-        
-        tableHtml += '</tbody></table><p><br></p>';
-        
-        const quill = quillRef.current?.getEditor();
-        if (quill) {
-          const range = quill.getSelection();
-          if (range) {
-            quill.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
-          }
-        }
-      }
-    }
-  };
-
-  // Quill 모듈 설정 (간단한 포맷팅만 지원)
-  const modules = {
-    toolbar: [
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'image'],
-      ['clean']
-    ],
-    clipboard: {
-      matchVisual: false,
-    }
-  };
-
-  const formats = [
-    'bold', 'italic', 'underline', 
-    'list', 'bullet', 'link', 'image'
-  ];
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
-
-  // Excel 표 붙여넣기 이벤트 리스너 등록
-  useEffect(() => {
-    const editor = quillRef.current?.getEditor();
-    if (editor) {
-      const editorElement = editor.root;
-      editorElement.addEventListener('paste', handleExcelPaste as EventListener);
-      
-      return () => {
-        editorElement.removeEventListener('paste', handleExcelPaste as EventListener);
-      };
-    }
-  }, []);
 
   // 드롭다운 옵션들
   const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
@@ -551,15 +451,11 @@ export default function Menu2() {
                 {isTemplateLoading ? (
                   <Skeleton className="h-80 w-full" />
                 ) : (
-                  <ReactQuill
-                    ref={quillRef}
-                    theme="snow"
-                    value={requestContent}
+                  <TipTapEditor
+                    content={requestContent}
                     onChange={setRequestContent}
-                    placeholder="의뢰 내용을 입력하세요. 이미지를 복사해서 붙여넣기할 수 있습니다."
-                    modules={modules}
-                    formats={formats}
-                    style={{ minHeight: '400px' }}
+                    placeholder="의뢰 내용을 입력하세요. 이미지를 복사해서 붙여넣기하거나 Excel 표를 붙여넣기할 수 있습니다."
+                    className="min-h-[400px]"
                   />
                 )}
                 <p className="text-sm text-gray-500 mt-2">
@@ -568,7 +464,11 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다. 엑셀 표는 편집 가능한 HTML 표로 변환됩니다.</span>
+                  <span className="text-blue-600">
+                    고급 리치 텍스트 에디터: 볼드, 이탤릭, 목록, 링크를 지원하며, 이미지나 Excel 표를 직접 붙여넣기할 수 있습니다. 
+                    붙여넣어진 표는 모든 셀을 편집할 수 있고, 행/열 추가/삭제가 가능합니다. 
+                    툴바의 표 버튼을 사용해 새로운 표를 생성할 수도 있습니다.
+                  </span>
                 </p>
               </div>
             )}
