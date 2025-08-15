@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import TipTapEditor from "@/components/TipTapEditor";
+import { CKEditor5Component } from "@/components/CKEditor5Component";
 
 interface EmpInfo {
   id: number;
@@ -451,11 +451,10 @@ export default function Menu2() {
                 {isTemplateLoading ? (
                   <Skeleton className="h-80 w-full" />
                 ) : (
-                  <TipTapEditor
+                  <CKEditor5Component
                     content={requestContent}
                     onChange={setRequestContent}
                     placeholder="의뢰 내용을 입력하세요. 이미지를 복사해서 붙여넣기하거나 Excel 표를 붙여넣기할 수 있습니다."
-                    className="min-h-[400px]"
                   />
                 )}
                 <p className="text-sm text-gray-500 mt-2">
