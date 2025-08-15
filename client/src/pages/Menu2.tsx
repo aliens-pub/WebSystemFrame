@@ -83,7 +83,10 @@ export default function Menu2() {
       const lines = textData.split('\n').filter(line => line.trim());
       if (lines.length > 1 && lines.some(line => line.includes('\t'))) {
         // 탭으로 구분된 데이터를 HTML 표로 변환
-        let tableHtml = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;"><tbody>';
+        const cellCount = Math.max(...lines.map(line => line.split('\t').length));
+        const cellWidth = `${(100 / cellCount).toFixed(2)}%`;
+        
+        let tableHtml = `<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0; table-layout: fixed;"><tbody>`;
         
         lines.forEach((line, index) => {
           const cells = line.split('\t');
@@ -92,7 +95,7 @@ export default function Menu2() {
             cells.forEach(cell => {
               const tag = index === 0 ? 'th' : 'td';
               const bgColor = index === 0 ? 'background-color: #f5f5f5; font-weight: bold;' : '';
-              tableHtml += `<${tag} style="border: 1px solid #ccc; padding: 8px; ${bgColor}">${cell.trim()}</${tag}>`;
+              tableHtml += `<${tag} contenteditable="true" style="border: 1px solid #ccc; padding: 8px; width: ${cellWidth}; ${bgColor}">${cell.trim()}</${tag}>`;
             });
             tableHtml += '</tr>';
           }
@@ -134,44 +137,65 @@ export default function Menu2() {
     if (quill) {
       const range = quill.getSelection();
       if (range) {
-        const tableHtml = `
-          <table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;">
-            <thead>
-              <tr>
-                <th style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">헤더 1</th>
-                <th style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">헤더 2</th>
-                <th style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">헤더 3</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="border: 1px solid #ccc; padding: 8px;">셀 1</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">셀 2</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">셀 3</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ccc; padding: 8px;">셀 4</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">셀 5</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">셀 6</td>
-              </tr>
-            </tbody>
-          </table>
-          <p><br></p>
-        `;
+        const tableHtml = `<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0; table-layout: fixed;">
+  <thead>
+    <tr>
+      <th contenteditable="true" style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5; width: 33.33%;">헤더 1</th>
+      <th contenteditable="true" style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5; width: 33.33%;">헤더 2</th>
+      <th contenteditable="true" style="border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5; width: 33.33%;">헤더 3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td contenteditable="true" style="border: 1px solid #ccc; padding: 8px;">셀 1</td>
+      <td contenteditable="true" style="border: 1px solid #ccc; padding: 8px;">셀 2</td>
+      <td contenteditable="true" style="border: 1px solid #ccc; padding: 8px;">셀 3</td>
+    </tr>
+    <tr>
+      <td contenteditable="true" style="border: 1px solid #ccc; padding: 8px;">셀 4</td>
+      <td contenteditable="true" style="border: 1px solid #ccc; padding: 8px;">셀 5</td>
+      <td contenteditable="true" style="border: 1px solid #ccc; padding: 8px;">셀 6</td>
+    </tr>
+  </tbody>
+</table>
+<p><br></p>`;
         quill.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
       }
     }
   };
 
-  // React Quill 에디터 커스터마이징
+  // React Quill 에디터 커스터마이징 - 표 버튼 클릭 이벤트 처리
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const tableButton = document.querySelector('.ql-table-insert');
+      if (tableButton) {
+        tableButton.addEventListener('click', insertTable);
+        return () => {
+          tableButton.removeEventListener('click', insertTable);
+        };
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // 표 셀 편집 가능하도록 설정
   useEffect(() => {
     const quillEditor = quillRef.current?.getEditor();
     if (quillEditor) {
-      // 커스텀 툴바 버튼 등록
-      const toolbar = quillEditor.getModule('toolbar');
-      if (toolbar) {
-        toolbar.addHandler('table-insert', insertTable);
-      }
+      const editor = quillEditor.root;
+      const handleClick = (e: Event) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'TD' || target.tagName === 'TH') {
+          target.setAttribute('contenteditable', 'true');
+          target.focus();
+        }
+      };
+      
+      editor.addEventListener('click', handleClick);
+      return () => {
+        editor.removeEventListener('click', handleClick);
+      };
     }
   }, []);
 
@@ -599,6 +623,7 @@ export default function Menu2() {
                       'bold', 'italic', 'underline', 
                       'list', 'bullet', 'link', 'image'
                     ]}
+                    preserveWhitespace
                     style={{ minHeight: '400px' }}
                   />
                 )}
@@ -608,7 +633,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표 삽입을 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표 삽입을 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다. 표 셀을 클릭하면 내용을 편집할 수 있습니다.</span>
                 </p>
               </div>
             )}
