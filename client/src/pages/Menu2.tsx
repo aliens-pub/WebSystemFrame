@@ -13,6 +13,19 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import Quill from 'quill';
+
+// quill-better-table 모듈 import 및 등록
+// @ts-ignore
+import QuillBetterTable from 'quill-better-table';
+import 'quill-better-table/dist/quill-better-table.css';
+
+// Quill에 better-table 모듈 등록
+try {
+  Quill.register('modules/better-table', QuillBetterTable);
+} catch (error) {
+  console.warn('better-table module registration failed:', error);
+}
 
 interface EmpInfo {
   id: number;
@@ -46,12 +59,109 @@ export default function Menu2() {
   const [open, setOpen] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
 
-  // 클립보드 처리 (이미지 및 표 데이터)
-  const handlePaste = (event: ClipboardEvent) => {
+  // Quill 모듈 설정
+  const modules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['link', 'image'],
+      ['table', 'table-insert-row', 'table-insert-column', 'table-delete-row', 'table-delete-column']
+    ],
+    'better-table': {
+      operationMenu: {
+        items: {
+          unmergeCells: {
+            text: '셀 병합 해제'
+          },
+          insertColumnRight: {
+            text: '오른쪽에 열 삽입'
+          },
+          insertColumnLeft: {
+            text: '왼쪽에 열 삽입'
+          },
+          insertRowUp: {
+            text: '위에 행 삽입'
+          },
+          insertRowDown: {
+            text: '아래에 행 삽입'
+          },
+          mergeCells: {
+            text: '셀 병합'
+          },
+          deleteColumn: {
+            text: '열 삭제'
+          },
+          deleteRow: {
+            text: '행 삭제'
+          },
+          deleteTable: {
+            text: '표 삭제'
+          }
+        },
+        color: {
+          colors: ['green', 'red', 'yellow', 'blue', 'white'],
+          text: '배경색:'
+        }
+      }
+    },
+    clipboard: {
+      matchVisual: false,
+      matchers: [
+        // Excel 표 붙여넣기 처리 - 탭으로 구분된 텍스트
+        ['SPAN', (node: any, delta: any) => {
+          const text = node.textContent || '';
+          if (text.includes('\t')) {
+            const lines = text.split('\n').filter((line: string) => line.trim());
+            if (lines.length > 1 && lines.some((line: string) => line.includes('\t'))) {
+              // 표 데이터를 Delta로 변환
+              const tableData = lines.map((line: string) => line.split('\t').map(cell => cell.trim()));
+              
+              setTimeout(() => {
+                const quill = quillRef.current?.getEditor();
+                if (quill) {
+                  const tableModule = quill.getModule('better-table') as any;
+                  if (tableModule && typeof tableModule.insertTable === 'function') {
+                    try {
+                      const table = tableModule.insertTable(tableData.length, tableData[0].length);
+                      
+                      // 표 데이터 채우기
+                      setTimeout(() => {
+                        tableData.forEach((rowData: string[], rowIndex: number) => {
+                          rowData.forEach((cellData: string, colIndex: number) => {
+                            const cellElement = document.querySelector(`table tr:nth-child(${rowIndex + 1}) td:nth-child(${colIndex + 1})`);
+                            if (cellElement) {
+                              cellElement.textContent = cellData;
+                            }
+                          });
+                        });
+                      }, 50);
+                    } catch (error) {
+                      console.warn('Table insertion failed:', error);
+                    }
+                  }
+                }
+              }, 100);
+              
+              return new (window as any).Delta();
+            }
+          }
+          return delta;
+        }]
+      ]
+    }
+  };
+
+  const formats = [
+    'bold', 'italic', 'underline', 
+    'list', 'bullet', 'link', 'image',
+    'table', 'table-row', 'table-cell', 'table-col'
+  ];
+
+  // Quill Delta 처리를 위한 이미지 paste 이벤트
+  const handleImagePaste = (event: ClipboardEvent) => {
     const items = event.clipboardData?.items;
     if (!items) return;
 
-    // 이미지 처리
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.indexOf('image') !== -1) {
@@ -74,105 +184,49 @@ export default function Menu2() {
         return;
       }
     }
-
-    // 텍스트/표 데이터 처리
-    const textData = event.clipboardData?.getData('text/plain');
-    if (textData && textData.includes('\t')) {
-      event.preventDefault();
-      
-      const lines = textData.split('\n').filter(line => line.trim());
-      if (lines.length > 1 && lines.some(line => line.includes('\t'))) {
-        // 탭으로 구분된 데이터를 편집 가능한 표로 변환
-        const maxCols = Math.max(...lines.map(line => line.split('\t').length));
-        let tableHtml = '';
-        
-        // 첫 번째 행을 헤더로 처리
-        lines.forEach((line, rowIndex) => {
-          const cells = line.split('\t');
-          if (cells.length > 1) {
-            if (rowIndex === 0) {
-              // 헤더 행
-              tableHtml += '<p><strong>표:</strong></p>';
-              cells.forEach((cell, colIndex) => {
-                tableHtml += `<p><strong>${cell.trim()}</strong>`;
-                if (colIndex < cells.length - 1) tableHtml += ' | ';
-                tableHtml += '</p>';
-              });
-              tableHtml += '<hr>';
-            } else {
-              // 데이터 행
-              cells.forEach((cell, colIndex) => {
-                tableHtml += `<p>${cell.trim()}`;
-                if (colIndex < cells.length - 1) tableHtml += ' | ';
-                tableHtml += '</p>';
-              });
-              if (rowIndex < lines.length - 1) tableHtml += '<br>';
-            }
-          }
-        });
-        
-        const quill = quillRef.current?.getEditor();
-        if (quill) {
-          const range = quill.getSelection();
-          if (range) {
-            quill.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
-          }
-        }
-      }
-    }
   };
 
-  // 에디터 마운트 시 paste 이벤트 리스너 등록
+  // 이미지 paste 이벤트 리스너 등록
   useEffect(() => {
     const editor = quillRef.current?.getEditor();
     if (editor) {
       const editorElement = editor.root;
-      editorElement.addEventListener('paste', handlePaste as EventListener);
+      editorElement.addEventListener('paste', handleImagePaste as EventListener);
       
       return () => {
-        editorElement.removeEventListener('paste', handlePaste as EventListener);
+        editorElement.removeEventListener('paste', handleImagePaste as EventListener);
       };
     }
-  }, [quillRef.current]);
+  }, []);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
 
-  // 간단한 표 형식 삽입 기능
-  const insertTable = () => {
-    const quill = quillRef.current?.getEditor();
-    if (quill) {
-      const range = quill.getSelection();
-      if (range) {
-        const tableText = `
-표 제목
-
-헤더 1 | 헤더 2 | 헤더 3
------|-----|-----
-셀 1 | 셀 2 | 셀 3
-셀 4 | 셀 5 | 셀 6
-
-`;
-        quill.insertText(range.index, tableText);
+  // better-table 모듈 초기화
+  useEffect(() => {
+    if (!quillRef.current) return;
+    
+    const quillEditor = quillRef.current.getEditor();
+    if (quillEditor) {
+      const tableModule = quillEditor.getModule('better-table') as any;
+      if (tableModule) {
+        // 표 툴바 버튼 이벤트 등록
+        const toolbar = quillEditor.getModule('toolbar') as any;
+        if (toolbar && typeof toolbar.addHandler === 'function') {
+          try {
+            toolbar.addHandler('table', () => {
+              if (typeof tableModule.insertTable === 'function') {
+                tableModule.insertTable(3, 3);
+              }
+            });
+          } catch (error) {
+            console.warn('Table handler registration failed:', error);
+          }
+        }
       }
     }
-  };
-
-  // React Quill 에디터 커스터마이징 - 표 버튼 클릭 이벤트 처리
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const tableButton = document.querySelector('.ql-table-insert');
-      if (tableButton) {
-        tableButton.addEventListener('click', insertTable);
-        return () => {
-          tableButton.removeEventListener('click', insertTable);
-        };
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  }, [requestContent]);
 
   // 드롭다운 옵션들
   const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
@@ -583,22 +637,8 @@ export default function Menu2() {
                     value={requestContent}
                     onChange={setRequestContent}
                     placeholder="의뢰 내용을 입력하세요. 이미지를 복사해서 붙여넣기할 수 있습니다."
-                    modules={{
-                      toolbar: [
-                        ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'image'],
-                        ['table-insert']
-                      ],
-                      clipboard: {
-                        matchVisual: false,
-                      }
-                    }}
-                    formats={[
-                      'bold', 'italic', 'underline', 
-                      'list', 'bullet', 'link', 'image'
-                    ]}
-                    preserveWhitespace
+                    modules={modules}
+                    formats={formats}
                     style={{ minHeight: '400px' }}
                   />
                 )}
@@ -608,7 +648,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다. 엑셀 표는 편집 가능한 텍스트 형식으로 변환됩니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표 편집을 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다. 표 내용을 직접 편집하고 행/열을 추가/삭제할 수 있습니다.</span>
                 </p>
               </div>
             )}
