@@ -288,6 +288,39 @@ def request_submission_view(request):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_request_submission_view(request, submission_id):
+    """의뢰 삭제 - 의뢰자와 현재 사용자가 일치할 때만 삭제 가능"""
+    try:
+        # 로그인 확인
+        employee_id = request.session.get('employee_id')
+        if not employee_id:
+            return Response({'error': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # 현재 사용자 정보 가져오기
+        current_employee = Employee.objects.get(id=employee_id)
+        
+        # 삭제할 의뢰 찾기
+        try:
+            submission = RequestSubmission.objects.get(id=submission_id)
+        except RequestSubmission.DoesNotExist:
+            return Response({'error': '의뢰를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 의뢰자와 현재 사용자가 일치하는지 확인
+        if submission.submitted_by != current_employee.username:
+            return Response({'error': '본인이 작성한 의뢰만 삭제할 수 있습니다.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # 의뢰 삭제
+        submission.delete()
+        
+        return Response({'message': '의뢰가 삭제되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
+        
+    except Employee.DoesNotExist:
+        return Response({'error': '사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['PATCH'])
 @permission_classes([AllowAny])
 def update_employee_roles_view(request):
