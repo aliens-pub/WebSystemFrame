@@ -204,6 +204,7 @@
   border-collapse: collapse;
   width: 100%;
   margin: 10px 0;
+  table-layout: fixed;
 }
 
 .ql-editor table td,
@@ -211,11 +212,31 @@
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  position: relative;
 }
 
 .ql-editor table th {
   background-color: #f5f5f5;
   font-weight: bold;
+}
+
+.ql-editor table td:focus,
+.ql-editor table th:focus {
+  outline: 2px solid #007bff;
+  outline-offset: -2px;
+  background-color: #f8f9fa;
+}
+
+.ql-editor table td[contenteditable="true"],
+.ql-editor table th[contenteditable="true"] {
+  cursor: text;
+}
+
+.ql-editor table td[contenteditable="true"]:hover,
+.ql-editor table th[contenteditable="true"]:hover {
+  background-color: #f8f9fa;
 }
 
 @layer base {
