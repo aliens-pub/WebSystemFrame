@@ -11,7 +11,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Editor } from '@tinymce/tinymce-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface EmpInfo {
   id: number;
@@ -43,7 +44,7 @@ export default function Menu2() {
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
-  const editorRef = useRef<any>(null);
+  const quillRef = useRef<ReactQuill>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -157,31 +158,7 @@ export default function Menu2() {
       setRequestContent(emailTemplate.content);
     } else if (selectedDepartment) {
       // 기본 템플릿을 HTML 형식으로 설정
-      const defaultTemplate = `
-        <p>안녕하세요, <strong>${selectedDepartment}</strong>입니다.</p>
-        <p>아래와 같이 업무를 의뢰드립니다.</p>
-        <table class="table-basic" style="width: 100%; margin: 16px 0;">
-          <tbody>
-            <tr>
-              <td style="background-color: #f2f2f2; font-weight: bold; width: 120px;">■ 의뢰 내용</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td style="background-color: #f2f2f2; font-weight: bold;">■ 요청 기한</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td style="background-color: #f2f2f2; font-weight: bold;">■ 우선순위</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td style="background-color: #f2f2f2; font-weight: bold;">■ 참고사항</td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-        <p>감사합니다.</p>
-      `;
+      const defaultTemplate = `<p>안녕하세요, <strong>${selectedDepartment}</strong>입니다.</p><p>아래와 같이 업무를 의뢰드립니다.</p><p><br></p><p><strong>■ 의뢰 내용:</strong></p><p><br></p><p><strong>■ 요청 기한:</strong></p><p><br></p><p><strong>■ 우선순위:</strong></p><p><br></p><p><strong>■ 참고사항:</strong></p><p><br></p><p>감사합니다.</p>`;
       setRequestContent(defaultTemplate);
     }
   }, [emailTemplate, selectedDepartment]);
@@ -476,57 +453,45 @@ export default function Menu2() {
                 {isTemplateLoading ? (
                   <Skeleton className="h-80 w-full" />
                 ) : (
-                  <div className="border rounded-md">
-                    <Editor
-                      onInit={(evt: any, editor: any) => editorRef.current = editor}
-                      value={requestContent}
-                      onEditorChange={(content: string) => setRequestContent(content)}
-                      init={{
-                        height: 400,
-                        menubar: false,
-                        plugins: [
-                          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                          'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                  <ReactQuill
+                    ref={quillRef}
+                    theme="snow"
+                    value={requestContent}
+                    onChange={setRequestContent}
+                    placeholder="의뢰 내용을 입력하세요. 표 삽입 및 이미지 삽입이 가능합니다."
+                    modules={{
+                      toolbar: {
+                        container: [
+                          [{ 'header': [1, 2, 3, false] }],
+                          ['bold', 'italic', 'underline', 'strike'],
+                          [{ 'color': [] }, { 'background': [] }],
+                          [{ 'align': [] }],
+                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                          ['blockquote', 'code-block'],
+                          ['link', 'image'],
+                          ['clean']
                         ],
-                        toolbar: 'undo redo | blocks | ' +
-                          'bold italic forecolor | alignleft aligncenter ' +
-                          'alignright alignjustify | bullist numlist outdent indent | ' +
-                          'table | image | removeformat | help',
-                        table_toolbar: 'tableprops tabledelete | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol',
-                        table_appearance_options: false,
-                        table_grid: false,
-                        table_class_list: [
-                          {title: '기본 표', value: 'table-basic'},
-                          {title: '줄무늬 표', value: 'table-striped'},
-                          {title: '테두리 표', value: 'table-bordered'}
-                        ],
-                        image_advtab: true,
-                        image_caption: true,
-                        image_list: [
-                          {title: '샘플 이미지 1', value: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzNzNkYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuyCmO2UjCDsnbTrr7jsp4AgMTwvdGV4dD4KICA8L3N2Zz4='},
-                          {title: '샘플 이미지 2', value: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzEwYjk4MSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuyCmO2UjCDsnbTrr7jsp4AgMjwvdGV4dD4KICA8L3N2Zz4='}
-                        ],
-                        content_style: `
-                          body { font-family:Helvetica,Arial,sans-serif; font-size:14px; }
-                          .table-basic { border-collapse: collapse; width: 100%; }
-                          .table-basic th, .table-basic td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                          .table-basic th { background-color: #f2f2f2; font-weight: bold; }
-                          .table-striped { border-collapse: collapse; width: 100%; }
-                          .table-striped th, .table-striped td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                          .table-striped th { background-color: #f2f2f2; font-weight: bold; }
-                          .table-striped tr:nth-child(even) { background-color: #f9f9f9; }
-                          .table-bordered { border-collapse: collapse; width: 100%; border: 2px solid #333; }
-                          .table-bordered th, .table-bordered td { border: 1px solid #333; padding: 8px; text-align: left; }
-                          .table-bordered th { background-color: #f2f2f2; font-weight: bold; }
-                        `,
-                        placeholder: '의뢰 내용을 입력하세요. 표 삽입은 상단 메뉴에서 가능합니다.',
-                        branding: false,
-                        resize: false,
-                        statusbar: false
-                      }}
-                    />
-                  </div>
+                        handlers: {
+                          image: function() {
+                            const range = this.quill.getSelection();
+                            const value = prompt('이미지 URL을 입력하세요:');
+                            if (value && range) {
+                              this.quill.insertEmbed(range.index, 'image', value, 'user');
+                            }
+                          }
+                        }
+                      },
+                      clipboard: {
+                        matchVisual: false,
+                      }
+                    }}
+                    formats={[
+                      'header', 'bold', 'italic', 'underline', 'strike',
+                      'color', 'background', 'align', 'list', 'bullet',
+                      'blockquote', 'code-block', 'link', 'image'
+                    ]}
+                    style={{ minHeight: '400px' }}
+                  />
                 )}
                 <p className="text-sm text-gray-500 mt-2">
                   {emailTemplate
@@ -534,7 +499,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">표 삽입, 이미지 삽입, 텍스트 서식 등의 기능을 사용할 수 있습니다.</span>
+                  <span className="text-blue-600">텍스트 서식, 목록, 링크, 이미지 삽입 등의 기능을 사용할 수 있습니다.</span>
                 </p>
               </div>
             )}
