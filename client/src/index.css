@@ -182,29 +182,12 @@
   padding-top: 8px;
 }
 
-/* Custom React Quill table button styling */
-.ql-toolbar .ql-table-insert {
-  width: 28px;
-  height: 28px;
-}
-
-.ql-toolbar .ql-table-insert:before {
-  content: '⊞';
-  font-size: 14px;
-  color: #444;
-  font-weight: bold;
-}
-
-.ql-toolbar .ql-table-insert:hover:before {
-  color: #06c;
-}
-
 /* Enhanced table styling in Quill editor */
 .ql-editor table {
   border-collapse: collapse;
   width: 100%;
   margin: 10px 0;
-  table-layout: fixed;
+  border: 1px solid #ccc;
 }
 
 .ql-editor table td,
@@ -214,7 +197,7 @@
   text-align: left;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  position: relative;
+  min-width: 100px;
 }
 
 .ql-editor table th {
@@ -222,21 +205,10 @@
   font-weight: bold;
 }
 
-.ql-editor table td:focus,
-.ql-editor table th:focus {
-  outline: 2px solid #007bff;
-  outline-offset: -2px;
+.ql-editor table td:hover,
+.ql-editor table th:hover {
   background-color: #f8f9fa;
-}
-
-.ql-editor table td[contenteditable="true"],
-.ql-editor table th[contenteditable="true"] {
   cursor: text;
-}
-
-.ql-editor table td[contenteditable="true"]:hover,
-.ql-editor table th[contenteditable="true"]:hover {
-  background-color: #f8f9fa;
 }
 
 @layer base {

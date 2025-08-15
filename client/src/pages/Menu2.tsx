@@ -13,19 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import Quill from 'quill';
-
-// quill-better-table 모듈 import 및 등록
-// @ts-ignore
-import QuillBetterTable from 'quill-better-table';
-import 'quill-better-table/dist/quill-better-table.css';
-
-// Quill에 better-table 모듈 등록
-try {
-  Quill.register('modules/better-table', QuillBetterTable);
-} catch (error) {
-  console.warn('better-table module registration failed:', error);
-}
 
 interface EmpInfo {
   id: number;
@@ -59,109 +46,12 @@ export default function Menu2() {
   const [open, setOpen] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
 
-  // Quill 모듈 설정
-  const modules = {
-    toolbar: [
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'image'],
-      ['table', 'table-insert-row', 'table-insert-column', 'table-delete-row', 'table-delete-column']
-    ],
-    'better-table': {
-      operationMenu: {
-        items: {
-          unmergeCells: {
-            text: '셀 병합 해제'
-          },
-          insertColumnRight: {
-            text: '오른쪽에 열 삽입'
-          },
-          insertColumnLeft: {
-            text: '왼쪽에 열 삽입'
-          },
-          insertRowUp: {
-            text: '위에 행 삽입'
-          },
-          insertRowDown: {
-            text: '아래에 행 삽입'
-          },
-          mergeCells: {
-            text: '셀 병합'
-          },
-          deleteColumn: {
-            text: '열 삭제'
-          },
-          deleteRow: {
-            text: '행 삭제'
-          },
-          deleteTable: {
-            text: '표 삭제'
-          }
-        },
-        color: {
-          colors: ['green', 'red', 'yellow', 'blue', 'white'],
-          text: '배경색:'
-        }
-      }
-    },
-    clipboard: {
-      matchVisual: false,
-      matchers: [
-        // Excel 표 붙여넣기 처리 - 탭으로 구분된 텍스트
-        ['SPAN', (node: any, delta: any) => {
-          const text = node.textContent || '';
-          if (text.includes('\t')) {
-            const lines = text.split('\n').filter((line: string) => line.trim());
-            if (lines.length > 1 && lines.some((line: string) => line.includes('\t'))) {
-              // 표 데이터를 Delta로 변환
-              const tableData = lines.map((line: string) => line.split('\t').map(cell => cell.trim()));
-              
-              setTimeout(() => {
-                const quill = quillRef.current?.getEditor();
-                if (quill) {
-                  const tableModule = quill.getModule('better-table') as any;
-                  if (tableModule && typeof tableModule.insertTable === 'function') {
-                    try {
-                      const table = tableModule.insertTable(tableData.length, tableData[0].length);
-                      
-                      // 표 데이터 채우기
-                      setTimeout(() => {
-                        tableData.forEach((rowData: string[], rowIndex: number) => {
-                          rowData.forEach((cellData: string, colIndex: number) => {
-                            const cellElement = document.querySelector(`table tr:nth-child(${rowIndex + 1}) td:nth-child(${colIndex + 1})`);
-                            if (cellElement) {
-                              cellElement.textContent = cellData;
-                            }
-                          });
-                        });
-                      }, 50);
-                    } catch (error) {
-                      console.warn('Table insertion failed:', error);
-                    }
-                  }
-                }
-              }, 100);
-              
-              return new (window as any).Delta();
-            }
-          }
-          return delta;
-        }]
-      ]
-    }
-  };
-
-  const formats = [
-    'bold', 'italic', 'underline', 
-    'list', 'bullet', 'link', 'image',
-    'table', 'table-row', 'table-cell', 'table-col'
-  ];
-
-  // Quill Delta 처리를 위한 이미지 paste 이벤트
-  const handleImagePaste = (event: ClipboardEvent) => {
+  // 클립보드 Excel 표 처리 함수
+  const handleExcelPaste = (event: ClipboardEvent) => {
     const items = event.clipboardData?.items;
     if (!items) return;
 
+    // 이미지 처리
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.indexOf('image') !== -1) {
@@ -184,49 +74,78 @@ export default function Menu2() {
         return;
       }
     }
+
+    // 탭으로 구분된 표 데이터 처리
+    const textData = event.clipboardData?.getData('text/plain');
+    if (textData && textData.includes('\t')) {
+      event.preventDefault();
+      
+      const lines = textData.split('\n').filter(line => line.trim());
+      if (lines.length > 1 && lines.some(line => line.includes('\t'))) {
+        // 탭으로 구분된 데이터를 HTML 표로 변환
+        const tableData = lines.map(line => line.split('\t').map(cell => cell.trim()));
+        const maxCols = Math.max(...tableData.map(row => row.length));
+        
+        let tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 10px 0; border: 1px solid #ccc;"><tbody>';
+        
+        tableData.forEach((rowData, rowIndex) => {
+          tableHtml += '<tr>';
+          for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+            const cellData = rowData[colIndex] || '';
+            const isHeader = rowIndex === 0;
+            const tag = isHeader ? 'th' : 'td';
+            const style = `border: 1px solid #ccc; padding: 8px; ${isHeader ? 'background-color: #f5f5f5; font-weight: bold;' : ''}`;
+            tableHtml += `<${tag} style="${style}">${cellData}</${tag}>`;
+          }
+          tableHtml += '</tr>';
+        });
+        
+        tableHtml += '</tbody></table><p><br></p>';
+        
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+          const range = quill.getSelection();
+          if (range) {
+            quill.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
+          }
+        }
+      }
+    }
   };
 
-  // 이미지 paste 이벤트 리스너 등록
-  useEffect(() => {
-    const editor = quillRef.current?.getEditor();
-    if (editor) {
-      const editorElement = editor.root;
-      editorElement.addEventListener('paste', handleImagePaste as EventListener);
-      
-      return () => {
-        editorElement.removeEventListener('paste', handleImagePaste as EventListener);
-      };
+  // Quill 모듈 설정
+  const modules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['link', 'image']
+    ],
+    clipboard: {
+      matchVisual: false,
     }
-  }, []);
+  };
+
+  const formats = [
+    'bold', 'italic', 'underline', 
+    'list', 'bullet', 'link', 'image'
+  ];
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
 
-  // better-table 모듈 초기화
+  // Excel 표 붙여넣기 이벤트 리스너 등록
   useEffect(() => {
-    if (!quillRef.current) return;
-    
-    const quillEditor = quillRef.current.getEditor();
-    if (quillEditor) {
-      const tableModule = quillEditor.getModule('better-table') as any;
-      if (tableModule) {
-        // 표 툴바 버튼 이벤트 등록
-        const toolbar = quillEditor.getModule('toolbar') as any;
-        if (toolbar && typeof toolbar.addHandler === 'function') {
-          try {
-            toolbar.addHandler('table', () => {
-              if (typeof tableModule.insertTable === 'function') {
-                tableModule.insertTable(3, 3);
-              }
-            });
-          } catch (error) {
-            console.warn('Table handler registration failed:', error);
-          }
-        }
-      }
+    const editor = quillRef.current?.getEditor();
+    if (editor) {
+      const editorElement = editor.root;
+      editorElement.addEventListener('paste', handleExcelPaste as EventListener);
+      
+      return () => {
+        editorElement.removeEventListener('paste', handleExcelPaste as EventListener);
+      };
     }
-  }, [requestContent]);
+  }, []);
 
   // 드롭다운 옵션들
   const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
@@ -648,7 +567,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표 편집을 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다. 표 내용을 직접 편집하고 행/열을 추가/삭제할 수 있습니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다. 엑셀 표는 편집 가능한 HTML 표로 변환됩니다.</span>
                 </p>
               </div>
             )}
