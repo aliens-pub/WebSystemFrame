@@ -21,7 +21,8 @@ import {
   Check,
   X,
   Download,
-  Eye
+  Eye,
+  Trash2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
@@ -29,6 +30,8 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface RequestSubmission {
   id: number;
@@ -238,6 +241,8 @@ function AssigneeCell({
 
 export default function Menu1() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [filters, setFilters] = useState<FilterState>({
     searchTerm: "",
     dateFilter: {
@@ -271,6 +276,29 @@ export default function Menu1() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/request-submissions'] });
     },
+  });
+
+  // 삭제 뮤테이션
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/request-submissions/${id}/delete`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/request-submissions'] });
+      setIsModalOpen(false);
+      setSelectedSubmission(null);
+      toast({
+        title: "삭제 완료",
+        description: "의뢰가 성공적으로 삭제되었습니다.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "삭제 실패", 
+        description: error.message || "의뢰 삭제 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
   });
 
   const formatDate = (dateString: string) => {
@@ -714,8 +742,9 @@ export default function Menu1() {
             <DialogTitle>의뢰 상신 상세 정보</DialogTitle>
           </DialogHeader>
           {selectedSubmission && (
-            <ScrollArea className="max-h-[80vh]">
-              <div className="space-y-6 p-4">
+            <>
+              <ScrollArea className="max-h-[80vh]">
+                <div className="space-y-6 p-4">
                 {/* 기본 정보 */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -753,9 +782,9 @@ export default function Menu1() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">상세 설명</label>
+                  <label className="text-sm font-medium text-gray-700">상세 내용</label>
                   <div className="mt-1 p-3 bg-gray-50 rounded text-sm whitespace-pre-wrap">
-                    {selectedSubmission.description || '설명이 없습니다.'}
+                    <div dangerouslySetInnerHTML={{ __html: selectedSubmission.content || '내용이 없습니다.' }} />
                   </div>
                 </div>
 
@@ -799,17 +828,35 @@ export default function Menu1() {
                   </div>
                 </div>
 
-                {/* 추가 정보 */}
-                {selectedSubmission.additional_info && (
+                  {/* 부서 정보 */}
                   <div>
-                    <label className="text-sm font-medium text-gray-700">추가 정보</label>
-                    <div className="mt-1 p-3 bg-gray-50 rounded text-sm whitespace-pre-wrap">
-                      {selectedSubmission.additional_info}
+                    <label className="text-sm font-medium text-gray-700">부서</label>
+                    <div className="mt-1">
+                      <Badge variant="outline">{selectedSubmission.department}</Badge>
                     </div>
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </div>
+              </ScrollArea>
+
+              {/* 삭제 버튼 - 현재 사용자와 의뢰자가 일치할 때만 표시 */}
+              {user && selectedSubmission.submitted_by === user.username && (
+                <div className="flex justify-end mt-4 pt-4 border-t">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => {
+                      if (confirm('정말로 이 의뢰를 삭제하시겠습니까? 삭제된 의뢰는 복구할 수 없습니다.')) {
+                        deleteSubmissionMutation.mutate(selectedSubmission.id);
+                      }
+                    }}
+                    disabled={deleteSubmissionMutation.isPending}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleteSubmissionMutation.isPending ? '삭제 중...' : '삭제'}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>
