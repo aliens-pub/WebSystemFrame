@@ -505,15 +505,49 @@ export default function Menu2() {
                       toolbar: [
                         ['bold', 'italic', 'underline'],
                         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'image']
+                        ['link', 'image'],
+                        ['table']
                       ],
+                      table: true,
                       clipboard: {
                         matchVisual: false,
+                        matchers: [
+                          // 엑셀 표 데이터를 HTML 테이블로 변환
+                          ['text/html', (node: any, delta: any) => {
+                            if (node.tagName === 'TABLE') {
+                              return delta;
+                            }
+                            // 탭으로 구분된 텍스트를 표로 변환
+                            if (node.nodeType === 3 && node.textContent.includes('\t')) {
+                              const lines = node.textContent.split('\n').filter((line: string) => line.trim());
+                              if (lines.length > 1) {
+                                let tableHtml = '<table><tbody>';
+                                lines.forEach((line: string) => {
+                                  const cells = line.split('\t');
+                                  if (cells.length > 1) {
+                                    tableHtml += '<tr>';
+                                    cells.forEach((cell: string) => {
+                                      tableHtml += `<td>${cell.trim()}</td>`;
+                                    });
+                                    tableHtml += '</tr>';
+                                  }
+                                });
+                                tableHtml += '</tbody></table>';
+                                
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = tableHtml;
+                                return new (window as any).Quill.import('delta')().insert(tempDiv.firstChild);
+                              }
+                            }
+                            return delta;
+                          }]
+                        ]
                       }
                     }}
                     formats={[
                       'bold', 'italic', 'underline', 
-                      'list', 'bullet', 'link', 'image'
+                      'list', 'bullet', 'link', 'image',
+                      'table', 'table-cell-line', 'table-cell'
                     ]}
                     style={{ minHeight: '400px' }}
                   />
@@ -524,7 +558,7 @@ export default function Menu2() {
                     : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
                   }
                   <br />
-                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크를 사용할 수 있고, 이미지를 복사해서 붙여넣기할 수 있습니다.</span>
+                  <span className="text-blue-600">기본 텍스트 서식, 목록, 링크, 표를 사용할 수 있고, 이미지나 엑셀 표를 복사해서 붙여넣기할 수 있습니다.</span>
                 </p>
               </div>
             )}
