@@ -207,25 +207,26 @@ function AssigneeCell({
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          className="w-full justify-start h-6 p-1 text-left text-xs"
+          className="w-full justify-center h-5 p-0 text-xs min-w-0 truncate"
         >
           {selectedAssignee || "미지정"}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[180px] p-0">
+      <PopoverContent className="w-[160px] p-0">
         <Command>
-          <CommandInput placeholder="담당자 검색..." />
-          <CommandEmpty>담당자를 찾을 수 없습니다.</CommandEmpty>
+          <CommandInput placeholder="검색..." className="text-xs" />
+          <CommandEmpty className="text-xs">없음</CommandEmpty>
           <CommandGroup>
             {devTeamMembers.map((member) => (
               <CommandItem
                 key={member.emp_id}
                 value={member.name}
                 onSelect={() => handleAssigneeSelect(member.name)}
+                className="text-xs"
               >
                 <Check
                   className={cn(
-                    "mr-2 h-4 w-4",
+                    "mr-1 h-3 w-3",
                     selectedAssignee === member.name ? "opacity-100" : "opacity-0"
                   )}
                 />
@@ -586,20 +587,20 @@ export default function Menu1() {
       </div>
 
       {/* 데이터 테이블 */}
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
+      <div className="w-full overflow-auto">
+        <Table className="min-w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[70px] min-w-[70px]">
+              <TableHead className="w-16 min-w-16 text-xs">
                 <ColumnHeader
                   column="line_id"
-                  title="Line ID"
+                  title="Line"
                   data={getUniqueValues('line_id')}
                   onFilterChange={handleColumnFilter}
                   currentFilter={filters.columnFilters.find(f => f.column === 'line_id')}
                 />
               </TableHead>
-              <TableHead className="w-[80px] min-w-[80px]">
+              <TableHead className="w-20 min-w-20 text-xs">
                 <ColumnHeader
                   column="ppid"
                   title="PPID"
@@ -608,7 +609,7 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'ppid')}
                 />
               </TableHead>
-              <TableHead className="w-[80px] min-w-[80px]">
+              <TableHead className="w-20 min-w-20 text-xs">
                 <ColumnHeader
                   column="eqpid"
                   title="EQPID"
@@ -617,7 +618,7 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'eqpid')}
                 />
               </TableHead>
-              <TableHead className="w-[110px] min-w-[110px]">
+              <TableHead className="w-24 min-w-24 text-xs">
                 <ColumnHeader
                   column="change_request_items"
                   title="변경항목"
@@ -626,8 +627,8 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'change_request_items')}
                 />
               </TableHead>
-              <TableHead className="min-w-[200px]">제목</TableHead>
-              <TableHead className="w-[90px] min-w-[90px]">
+              <TableHead className="flex-1 min-w-0 text-xs">제목</TableHead>
+              <TableHead className="w-20 min-w-20 text-xs">
                 <ColumnHeader
                   column="submitted_by"
                   title="의뢰자"
@@ -636,7 +637,7 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'submitted_by')}
                 />
               </TableHead>
-              <TableHead className="w-[100px] min-w-[100px]">
+              <TableHead className="w-24 min-w-24 text-xs">
                 <ColumnHeader
                   column="submitted_at"
                   title="의뢰날짜"
@@ -645,7 +646,7 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'submitted_at')}
                 />
               </TableHead>
-              <TableHead className="w-[80px] min-w-[80px]">
+              <TableHead className="w-16 min-w-16 text-xs">
                 <ColumnHeader
                   column="status"
                   title="상태"
@@ -654,7 +655,7 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'status')}
                 />
               </TableHead>
-              <TableHead className="w-[100px] min-w-[100px]">담당자</TableHead>
+              <TableHead className="w-20 min-w-20 text-xs">담당자</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -687,44 +688,44 @@ export default function Menu1() {
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => handleRowClick(submission)}
                 >
-                  <TableCell className="font-mono text-xs p-2">
+                  <TableCell className="font-mono text-xs p-1 max-w-16 truncate">
                     {submission.line_id || '-'}
                   </TableCell>
-                  <TableCell className="font-mono text-xs p-2">
+                  <TableCell className="font-mono text-xs p-1 max-w-20 truncate">
                     {submission.ppid || '-'}
                   </TableCell>
-                  <TableCell className="font-mono text-xs p-2">
+                  <TableCell className="font-mono text-xs p-1 max-w-20 truncate">
                     {submission.eqpid || '-'}
                   </TableCell>
-                  <TableCell className="text-xs text-gray-700 p-2">
+                  <TableCell className="text-xs text-gray-700 p-1 max-w-24 truncate" title={submission.change_request_items || '-'}>
                     {submission.change_request_items || '-'}
                   </TableCell>
-                  <TableCell className="p-2">
-                    <div className="truncate max-w-[200px]" title={submission.title}>
+                  <TableCell className="p-1 min-w-0">
+                    <div className="truncate" title={submission.title}>
                       <span className="text-sm">{submission.title}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="p-2">
-                    <Badge variant="outline" className="text-xs px-1 py-0">
+                  <TableCell className="p-1 max-w-20">
+                    <Badge variant="outline" className="text-xs px-1 py-0 truncate w-full justify-center">
                       {submission.submitted_by}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-gray-600 p-2">
+                  <TableCell className="text-xs text-gray-600 p-1 max-w-24 truncate">
                     {formatDate(submission.submitted_at)}
                   </TableCell>
-                  <TableCell className="p-2">
+                  <TableCell className="p-1 max-w-16">
                     <Badge 
                       variant={
                         submission.status === '완료' ? 'default' :
                         submission.status === '진행중' ? 'secondary' :
                         'outline'
                       }
-                      className="text-xs px-1 py-0"
+                      className="text-xs px-1 py-0 w-full justify-center"
                     >
                       {submission.status || '대기중'}
                     </Badge>
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()} className="p-2">
+                  <TableCell onClick={(e) => e.stopPropagation()} className="p-1 max-w-20">
                     <AssigneeCell
                       submission={submission}
                       onAssigneeChange={handleAssigneeChange}
