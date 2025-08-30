@@ -113,3 +113,33 @@ class EmpApprovalRole(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.emp_id}) - {self.role}"
+
+class GuideDB(models.Model):
+    item = models.CharField(max_length=200, verbose_name="변경 아이템")
+    standard_TAT = models.IntegerField(verbose_name="표준 TAT(일)", help_text="표준 처리 시간(일 단위)")
+    comment = models.TextField(blank=True, null=True, verbose_name="코멘트")
+    reference = models.CharField(max_length=200, blank=True, null=True, verbose_name="참고사항")
+    
+    # 10개의 phpsi 컬럼
+    phpsi_1 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 1")
+    phpsi_2 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 2")
+    phpsi_3 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 3")
+    phpsi_4 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 4")
+    phpsi_5 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 5")
+    phpsi_6 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 6")
+    phpsi_7 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 7")
+    phpsi_8 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 8")
+    phpsi_9 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 9")
+    phpsi_10 = models.CharField(max_length=100, blank=True, null=True, verbose_name="PHPSI 10")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'guide_db'
+        verbose_name = '가이드 DB'
+        verbose_name_plural = '가이드 DB'
+        ordering = ['item']
+    
+    def __str__(self):
+        return f"{self.item} (TAT: {self.standard_TAT}일)"

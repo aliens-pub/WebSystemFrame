@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole
+from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole, GuideDB
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -52,4 +52,13 @@ class EmpApprovalRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmpApprovalRole
         fields = ['id', 'name', 'emp_id', 'role', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class GuideDBSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GuideDB
+        fields = ['id', 'item', 'standard_TAT', 'comment', 'reference',
+                 'phpsi_1', 'phpsi_2', 'phpsi_3', 'phpsi_4', 'phpsi_5',
+                 'phpsi_6', 'phpsi_7', 'phpsi_8', 'phpsi_9', 'phpsi_10',
+                 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']

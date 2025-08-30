@@ -18,4 +18,6 @@ urlpatterns = [
     path('request-submissions/<int:submission_id>', views.request_submission_detail_view, name='request_submission_detail'),
     path('employees/update-roles', views.update_employee_roles_view, name='update_employee_roles'),
     path('approval-roles', views.approval_roles_view, name='approval_roles'),
+    path('guide-db', views.guide_db_view, name='guide_db'),
+    path('guide-db/<int:guide_id>', views.guide_db_detail_view, name='guide_db_detail'),
 ]

@@ -81,7 +81,7 @@ export default function Menu2() {
   const { data: emailTemplate, isLoading: isTemplateLoading } = useQuery<EmailTemplate>({
     queryKey: ['/api/email-templates', selectedDepartment],
     queryFn: async () => {
-      const response = await fetch(`/api/email-templates/${selectedDepartment}`, {
+      const response = await fetch(`/api/email-templates/${encodeURIComponent(selectedDepartment)}`, {
         credentials: 'include'
       });
       if (!response.ok) {
@@ -107,20 +107,26 @@ export default function Menu2() {
       eqpid: string;
       change_request_items: string;
     }) => {
-      const response = await fetch('/api/request-submissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // 세션 쿠키 포함
-        body: JSON.stringify(requestData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('의뢰 상신에 실패했습니다.');
+      try {
+        const response = await fetch('/api/request-submissions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // 세션 쿠키 포함
+          body: JSON.stringify(requestData),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`의뢰 상신에 실패했습니다. (${response.status}): ${errorText}`);
+        }
+        
+        return response.json();
+      } catch (err) {
+        console.error('Submit request failed:', err);
+        throw err;
       }
-      
-      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -262,25 +268,7 @@ export default function Menu2() {
     });
   };
 
-  if (error) {
-    return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">의뢰 상신</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            부서별 의뢰 양식을 사용하여 업무를 상신할 수 있습니다.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <p className="text-red-600">데이터를 불러오는 중 오류가 발생했습니다.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
+  // Remove error blocking - let the fallback data handle failures
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

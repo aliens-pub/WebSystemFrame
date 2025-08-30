@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { FileText, GitBranch, Shield } from "lucide-react";
+import { FileText, GitBranch, Shield, Database } from "lucide-react";
 
 export default function Settings() {
   return (
@@ -11,7 +11,7 @@ export default function Settings() {
           <p className="text-gray-600">시스템 전반적인 설정을 관리합니다.</p>
         </div>
         
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Link href="/settings/request-forms">
             <Card className="cursor-pointer hover:shadow-md transition-shadow">
               <CardHeader>
@@ -50,6 +50,20 @@ export default function Settings() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600">사용자 역할별 권한을 설정합니다.</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/settings/database-edit">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Database className="mr-2 h-5 w-5" />
+                  DB 수정
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">Guide_DB 테이블을 엑셀처럼 편집합니다.</p>
               </CardContent>
             </Card>
           </Link>

@@ -99,15 +99,24 @@ MYSQL_DATABASES = {
     }
 }
 
-# 현재 Replit 환경에서는 기존 PostgreSQL 사용
-import dj_database_url
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'postgresql://postgres:@localhost:5432/business_system'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+# For local development without Docker, use SQLite
+if os.getenv('USE_SQLITE', 'False').lower() == 'true':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    # 현재 Replit 환경에서는 기존 PostgreSQL 사용
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL', 'postgresql://postgres:@localhost:5432/business_system'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 
 
 # Password validation

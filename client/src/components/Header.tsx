@@ -20,6 +20,7 @@ export function Header() {
     { name: "의뢰 양식 설정", path: "/settings/request-forms" },
     { name: "결재 경로 설정", path: "/settings/approval-paths" },
     { name: "권한 설정", path: "/settings/permissions" },
+    { name: "DB 수정", path: "/settings/database-edit" },
   ];
 
   const isActive = (path: string) => location === path;

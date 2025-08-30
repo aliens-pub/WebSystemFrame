@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.contrib.sessions.models import Session
-from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole
-from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer, EmpApprovalRoleSerializer
+from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole, GuideDB
+from .serializers import EmployeeSerializer, LoginSerializer, UpdateRoleSerializer, SystemStatsSerializer, EmpInfoSerializer, EmailTemplateSerializer, RequestSubmissionSerializer, EmpApprovalRoleSerializer, GuideDBSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -473,5 +473,57 @@ def request_submission_detail_view(request, submission_id):
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def guide_db_view(request):
+    """Guide_DB 목록 조회 및 새 항목 생성"""
+    if request.method == 'GET':
+        try:
+            guide_items = GuideDB.objects.all().order_by('item')
+            serializer = GuideDBSerializer(guide_items, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            serializer = GuideDBSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([AllowAny])
+def guide_db_detail_view(request, guide_id):
+    """특정 Guide_DB 항목 조회, 수정, 삭제"""
+    try:
+        guide_item = GuideDB.objects.get(id=guide_id)
+    except GuideDB.DoesNotExist:
+        return Response({'error': '해당 항목을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        serializer = GuideDBSerializer(guide_item)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        try:
+            serializer = GuideDBSerializer(guide_item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        try:
+            guide_item.delete()
+            return Response({'message': '항목이 삭제되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

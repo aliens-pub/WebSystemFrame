@@ -15,6 +15,7 @@ import Settings from "@/pages/Settings";
 import RequestForms from "@/pages/settings/RequestForms";
 import ApprovalPaths from "@/pages/settings/ApprovalPaths";
 import Permissions from "@/pages/settings/Permissions";
+import DatabaseEdit from "@/pages/DatabaseEdit";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -45,6 +46,7 @@ function AppContent() {
         <Route path="/settings/request-forms" component={RequestForms} />
         <Route path="/settings/approval-paths" component={ApprovalPaths} />
         <Route path="/settings/permissions" component={Permissions} />
+        <Route path="/settings/database-edit" component={DatabaseEdit} />
         <Route component={NotFound} />
       </Switch>
     </div>
