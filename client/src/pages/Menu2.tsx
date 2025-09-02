@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { CKEditor5Component } from "@/components/CKEditor5Component";
+import { TestTiptapEditor } from "@/components/TestTiptapEditor";
 
 interface EmpInfo {
   id: number;
@@ -439,24 +439,29 @@ export default function Menu2() {
                 {isTemplateLoading ? (
                   <Skeleton className="h-80 w-full" />
                 ) : (
-                  <CKEditor5Component
+                  <TestTiptapEditor
                     content={requestContent}
                     onChange={setRequestContent}
-                    placeholder="의뢰 내용을 입력하세요. 이미지를 복사해서 붙여넣기하거나 Excel 표를 붙여넣기할 수 있습니다."
+                    placeholder="의뢰 내용을 입력하세요. Ctrl+V로 이미지나 Excel 표를 붙여넣을 수 있습니다."
                   />
                 )}
-                <p className="text-sm text-gray-500 mt-2">
-                  {emailTemplate
-                    ? `${selectedDepartment}의 저장된 템플릿을 불러왔습니다. 필요에 따라 수정하세요.`
-                    : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
-                  }
-                  <br />
-                  <span className="text-blue-600">
-                    고급 리치 텍스트 에디터: 볼드, 이탤릭, 목록, 링크를 지원하며, 이미지나 Excel 표를 직접 붙여넣기할 수 있습니다. 
-                    붙여넣어진 표는 모든 셀을 편집할 수 있고, 행/열 추가/삭제가 가능합니다. 
-                    툴바의 표 버튼을 사용해 새로운 표를 생성할 수도 있습니다.
-                  </span>
-                </p>
+                <div className="text-sm text-gray-500 mt-2 space-y-2">
+                  <p>
+                    {emailTemplate
+                      ? `${selectedDepartment}의 저장된 템플릿을 불러왔습니다. 필요에 따라 수정하세요.`
+                      : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
+                    }
+                  </p>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 font-medium text-sm">🚀 향상된 에디터 기능</p>
+                    <ul className="text-blue-700 text-xs mt-2 space-y-1">
+                      <li>• <strong>이미지 붙여넣기:</strong> Ctrl+C로 복사한 이미지를 Ctrl+V로 바로 붙여넣기</li>
+                      <li>• <strong>Excel 표 붙여넣기:</strong> Excel에서 복사한 표를 서식 보존하여 붙여넣기</li>
+                      <li>• <strong>표 편집:</strong> 붙여넣은 표의 셀을 직접 수정 가능</li>
+                      <li>• <strong>HTML 저장:</strong> 모든 내용이 HTML 형태로 백엔드에 전송됩니다</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             )}
 
