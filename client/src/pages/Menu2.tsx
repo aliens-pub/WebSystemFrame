@@ -22,9 +22,8 @@ interface EmpInfo {
   updated_at: string;
 }
 
-interface EmailTemplate {
+interface CommonTemplate {
   id: number;
-  department: string;
   subject: string;
   content: string;
   auto_send: boolean;
@@ -77,22 +76,21 @@ export default function Menu2() {
     },
   });
 
-  // 선택된 부서의 이메일 템플릿 조회
-  const { data: emailTemplate, isLoading: isTemplateLoading } = useQuery<EmailTemplate>({
-    queryKey: ['/api/email-templates', selectedDepartment],
+  // 공통 이메일 템플릿 조회
+  const { data: emailTemplate, isLoading: isTemplateLoading } = useQuery<CommonTemplate>({
+    queryKey: ['/api/common-email-template'],
     queryFn: async () => {
-      const response = await fetch(`/api/email-templates/${encodeURIComponent(selectedDepartment)}`, {
+      const response = await fetch('/api/common-email-template', {
         credentials: 'include'
       });
       if (!response.ok) {
         if (response.status === 404) {
           return null;
         }
-        throw new Error('템플릿을 불러오는데 실패했습니다.');
+        throw new Error('공통 템플릿을 불러오는데 실패했습니다.');
       }
       return response.json();
     },
-    enabled: !!selectedDepartment,
   });
 
   // 의뢰 상신 mutation
@@ -156,16 +154,16 @@ export default function Menu2() {
     ? Array.from(new Set(empInfos.map(emp => emp.department))).sort()
     : [];
 
-  // 템플릿 로드 시 내용 설정
+  // 공통 템플릿 로드 시 내용 설정
   useEffect(() => {
     if (emailTemplate && emailTemplate.content) {
       setRequestContent(emailTemplate.content);
-    } else if (selectedDepartment) {
-      // 기본 템플릿을 HTML 형식으로 설정
-      const defaultTemplate = `<p>안녕하세요, <strong>${selectedDepartment}</strong>입니다.</p><p>아래와 같이 업무를 의뢰드립니다.</p><p><br></p><p><strong>■ 의뢰 내용:</strong></p><p><br></p><p><strong>■ 요청 기한:</strong></p><p><br></p><p><strong>■ 우선순위:</strong></p><p><br></p><p><strong>■ 참고사항:</strong></p><p><br></p><p>감사합니다.</p>`;
+    } else {
+      // 기본 공통 템플릿을 HTML 형식으로 설정
+      const defaultTemplate = `<p>안녕하세요.</p><p>아래와 같이 업무를 의뢰드립니다.</p><p><br></p><p><strong>■ 의뢰 내용:</strong></p><p><br></p><p><strong>■ 요청 기한:</strong></p><p><br></p><p><strong>■ 우선순위:</strong></p><p><br></p><p><strong>■ 참고사항:</strong></p><p><br></p><p>감사합니다.</p>`;
       setRequestContent(defaultTemplate);
     }
-  }, [emailTemplate, selectedDepartment]);
+  }, [emailTemplate]);
 
   // 4개 드롭다운 선택 시 자동 제목 생성
   useEffect(() => {
@@ -448,8 +446,8 @@ export default function Menu2() {
                 <div className="text-sm text-gray-500 mt-2 space-y-2">
                   <p>
                     {emailTemplate
-                      ? `${selectedDepartment}의 저장된 템플릿을 불러왔습니다. 필요에 따라 수정하세요.`
-                      : `${selectedDepartment}의 기본 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요.`
+                      ? "저장된 공통 템플릿을 불러왔습니다. 필요에 따라 수정하세요."
+                      : "기본 공통 템플릿을 사용합니다. 내용을 수정하여 의뢰서를 작성하세요."
                     }
                   </p>
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -459,6 +457,7 @@ export default function Menu2() {
                       <li>• <strong>Excel 표 붙여넣기:</strong> Excel에서 복사한 표를 서식 보존하여 붙여넣기</li>
                       <li>• <strong>표 편집:</strong> 붙여넣은 표의 셀을 직접 수정 가능</li>
                       <li>• <strong>HTML 저장:</strong> 모든 내용이 HTML 형태로 백엔드에 전송됩니다</li>
+                      <li>• <strong>공통 템플릿:</strong> 모든 부서가 동일한 의뢰 양식을 사용합니다</li>
                     </ul>
                   </div>
                 </div>

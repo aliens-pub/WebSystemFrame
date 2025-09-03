@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, Hash, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Settings, Users, Hash, Save, Search } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import * as React from "react";
@@ -18,7 +19,7 @@ interface EmpInfo {
   updated_at: string;
 }
 
-interface ApprovalRole {
+interface CommonApprovalRole {
   id: number;
   name: string;
   emp_id: string;
@@ -30,7 +31,7 @@ interface ApprovalRole {
 const APPROVAL_ROLES = ['결재', '병렬결재', '합의', '병렬합의', '통보'] as const;
 
 export default function ApprovalPaths() {
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [employeeRoles, setEmployeeRoles] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,24 +51,25 @@ export default function ApprovalPaths() {
     },
   });
 
-  // 선택된 부서의 기존 결재 역할 조회
-  const { data: existingRoles } = useQuery<ApprovalRole[]>({
-    queryKey: ["/api/approval-roles", selectedDepartment],
+  // 공통 결재 역할 조회
+  const { data: existingRoles } = useQuery<CommonApprovalRole[]>({
+    queryKey: ["/api/common-approval-roles"],
     queryFn: async () => {
-      if (!selectedDepartment) return [];
-      const response = await fetch(`/api/approval-roles?department=${encodeURIComponent(selectedDepartment)}`);
+      const response = await fetch('/api/common-approval-roles');
       if (!response.ok) {
-        throw new Error("결재 역할 정보를 불러오는데 실패했습니다.");
+        if (response.status === 404) {
+          return [];
+        }
+        throw new Error("공통 결재 역할 정보를 불러오는데 실패했습니다.");
       }
       return response.json();
     },
-    enabled: !!selectedDepartment,
   });
 
-  // 결재 역할 저장 mutation
+  // 공통 결재 역할 저장 mutation
   const saveRolesMutation = useMutation({
     mutationFn: async (data: { roles: Record<string, string> }) => {
-      const response = await fetch("/api/approval-roles", {
+      const response = await fetch("/api/common-approval-roles", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -75,16 +77,16 @@ export default function ApprovalPaths() {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error("결재 역할 저장에 실패했습니다.");
+        throw new Error("공통 결재 역할 저장에 실패했습니다.");
       }
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "저장 완료",
-        description: "결재 역할이 성공적으로 저장되었습니다.",
+        description: "공통 결재 경로가 성공적으로 저장되었습니다.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/approval-roles", selectedDepartment] });
+      queryClient.invalidateQueries({ queryKey: ["/api/common-approval-roles"] });
     },
     onError: (error) => {
       toast({
@@ -95,24 +97,16 @@ export default function ApprovalPaths() {
     },
   });
 
-  // 부서별 직원 수 계산
-  const departmentStats =
-    empInfos?.reduce(
-      (acc, emp) => {
-        acc[emp.department] = (acc[emp.department] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    ) || {};
-
-  // 선택된 부서의 직원들 필터링
-  const filteredEmployees = selectedDepartment
-    ? empInfos?.filter((emp) => emp.department === selectedDepartment) || []
-    : [];
+  // 검색 키워드로 직원 목록 필터링
+  const filteredEmployees = empInfos?.filter((emp) =>
+    emp.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+    emp.emp_id.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+    emp.department.toLowerCase().includes(searchKeyword.toLowerCase())
+  ) || [];
 
   // 기존 역할을 employeeRoles 상태에 반영
   React.useEffect(() => {
-    if (existingRoles && selectedDepartment) {
+    if (existingRoles) {
       const roles: Record<string, string> = {};
       existingRoles.forEach((role) => {
         roles[role.emp_id] = role.role;
@@ -121,7 +115,7 @@ export default function ApprovalPaths() {
     } else {
       setEmployeeRoles({});
     }
-  }, [existingRoles, selectedDepartment]);
+  }, [existingRoles]);
 
   // 역할 변경 핸들러
   const handleRoleChange = (empId: string, role: string) => {
@@ -133,25 +127,10 @@ export default function ApprovalPaths() {
 
   // 저장 핸들러
   const handleSave = () => {
-    if (!selectedDepartment) {
-      toast({
-        title: "오류",
-        description: "부서를 선택해주세요.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // 선택된 역할만 필터링
     const selectedRoles = Object.fromEntries(
       Object.entries(employeeRoles).filter(([, role]) => role && role.trim() !== '')
     );
-
-    console.log("=== 저장 버튼 클릭 ===");
-    console.log("selectedDepartment:", selectedDepartment);
-    console.log("employeeRoles:", employeeRoles);
-    console.log("selectedRoles:", selectedRoles);
-    console.log("selectedRoles length:", Object.keys(selectedRoles).length);
 
     if (Object.keys(selectedRoles).length === 0) {
       toast({
@@ -161,8 +140,6 @@ export default function ApprovalPaths() {
       });
       return;
     }
-
-    console.log("Mutation 데이터:", { roles: selectedRoles });
 
     saveRolesMutation.mutate({
       roles: selectedRoles
@@ -194,137 +171,124 @@ export default function ApprovalPaths() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6 flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">결재 경로 설정</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">공통 결재 경로 설정</h1>
           <p className="text-gray-600 text-sm mt-1">
-            부서별로 결재 경로를 설정할 수 있습니다.
+            모든 부서에서 공통으로 사용할 결재 경로를 설정합니다.
           </p>
         </div>
-        {selectedDepartment && (
-          <Button 
-            onClick={handleSave}
-            disabled={saveRolesMutation.isPending}
-            className="flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {saveRolesMutation.isPending ? "저장 중..." : "저장"}
-          </Button>
-        )}
+        <Button 
+          onClick={handleSave}
+          disabled={saveRolesMutation.isPending}
+          className="flex items-center gap-2"
+          size="lg"
+        >
+          <Save className="h-4 w-4" />
+          {saveRolesMutation.isPending ? "저장 중..." : "공통 결재 경로 저장"}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 왼쪽 박스 - 부서 목록 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Building2 className="mr-2 h-5 w-5" />
-              부서 목록
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(6)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(departmentStats).map(([department, count]) => (
-                  <Button
-                    key={department}
-                    variant={
-                      selectedDepartment === department ? "default" : "outline"
-                    }
-                    className="w-full justify-between h-12"
-                    onClick={() => setSelectedDepartment(department)}
-                  >
-                    <span className="font-medium">{department}</span>
-                    <Badge variant="secondary">{count}명</Badge>
-                  </Button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* 공통 결재 경로 설정 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Settings className="mr-2 h-5 w-5" />
+            공통 결재자 설정
+            <Badge variant="secondary" className="ml-2">
+              전체 적용
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* 검색창 */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="직원명, 사번, 부서명으로 검색..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-        {/* 오른쪽 박스 - 선택된 부서의 직원 목록 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              {selectedDepartment
-                ? `${selectedDepartment}  멤버 목록`
-                : "멤버 목록"}
-              {selectedDepartment && (
-                <Badge variant="secondary" className="ml-2">
-                  {filteredEmployees.length}명
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(8)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : !selectedDepartment ? (
-              <div className="text-center py-12">
-                <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-500">
-                  왼쪽에서 부서를 선택하면 해당 부서의 직원 목록이 표시됩니다.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredEmployees.map((emp) => (
-                  <div
-                    key={emp.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {emp.name}
-                        </p>
-                        <p className="text-sm text-gray-500 flex items-center">
-                          <Hash className="h-3 w-3 mr-1" />
-                          {emp.emp_id}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Select
-                        value={employeeRoles[emp.emp_id] || ""}
-                        onValueChange={(value) => handleRoleChange(emp.emp_id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="역할 선택" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {APPROVAL_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Badge variant="outline">{emp.department}</Badge>
-                    </div>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(8)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start">
+                  <Settings className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">공통 결재 경로 안내</h4>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• 여기서 설정한 결재자들이 모든 의뢰서의 결재 경로로 사용됩니다</li>
+                      <li>• 부서에 관계없이 동일한 결재 절차가 적용됩니다</li>
+                      <li>• 결재 → 병렬결재 → 합의 → 병렬합의 → 통보 순으로 역할을 설정하세요</li>
+                    </ul>
                   </div>
-                ))}
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {filteredEmployees.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <p className="text-gray-500">
+                      {searchKeyword ? "검색 결과가 없습니다." : "직원 정보가 없습니다."}
+                    </p>
+                  </div>
+                ) : (
+                  filteredEmployees.map((emp) => (
+                    <div
+                      key={emp.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {emp.name}
+                          </p>
+                          <p className="text-sm text-gray-500 flex items-center">
+                            <Hash className="h-3 w-3 mr-1" />
+                            {emp.emp_id}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Select
+                          value={employeeRoles[emp.emp_id] || ""}
+                          onValueChange={(value) => handleRoleChange(emp.emp_id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="역할 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {APPROVAL_ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Badge variant="outline">{emp.department}</Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </main>
   );
 }
