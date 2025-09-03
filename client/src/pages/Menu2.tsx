@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, FileText, Users, Check, ChevronsUpDown } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Send, FileText, Users, Check, ChevronsUpDown, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,10 +39,11 @@ export default function Menu2() {
   const [selectedLineId, setSelectedLineId] = useState<string>("");
   const [selectedPpid, setSelectedPpid] = useState<string>("");
   const [selectedEqpid, setSelectedEqpid] = useState<string>("");
-  const [selectedChangeRequestItem, setSelectedChangeRequestItem] = useState<string>("");
+  const [selectedChangeRequestItems, setSelectedChangeRequestItems] = useState<string[]>([]);
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
+  const [changeRequestOpen, setChangeRequestOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -165,13 +167,14 @@ export default function Menu2() {
     }
   }, [emailTemplate]);
 
-  // 4개 드롭다운 선택 시 자동 제목 생성
+  // 4개 드롭다운 선택 시 자동 제목 생성 (복수 선택 지원)
   useEffect(() => {
-    if (selectedLineId && selectedPpid && selectedEqpid && selectedChangeRequestItem) {
-      const autoTitle = `[${selectedLineId}_${selectedPpid}_${selectedEqpid}_${selectedChangeRequestItem}]`;
+    if (selectedLineId && selectedPpid && selectedEqpid && selectedChangeRequestItems.length > 0) {
+      const changeItemsText = selectedChangeRequestItems.join(', ');
+      const autoTitle = `[${selectedLineId}_${selectedPpid}_${selectedEqpid}] ${changeItemsText}`;
       setRequestTitle(autoTitle);
     }
-  }, [selectedLineId, selectedPpid, selectedEqpid, selectedChangeRequestItem]);
+  }, [selectedLineId, selectedPpid, selectedEqpid, selectedChangeRequestItems]);
 
   // HTML에서 텍스트 내용만 추출하는 함수
   const getTextFromHtml = (html: string) => {
@@ -218,7 +221,7 @@ export default function Menu2() {
       return;
     }
 
-    if (!selectedChangeRequestItem) {
+    if (selectedChangeRequestItems.length === 0) {
       toast({
         title: "변경 의뢰 항목 선택 필요",
         description: "변경 의뢰 항목을 선택해주세요.",
@@ -262,7 +265,7 @@ export default function Menu2() {
       line_id: selectedLineId,
       ppid: selectedPpid,
       eqpid: selectedEqpid,
-      change_request_items: selectedChangeRequestItem,
+      change_request_items: selectedChangeRequestItems.join(', '),
     });
   };
 
@@ -399,18 +402,67 @@ export default function Menu2() {
 
                 <div>
                   <Label htmlFor="change-request-item">변경 의뢰 항목</Label>
-                  <Select value={selectedChangeRequestItem} onValueChange={setSelectedChangeRequestItem}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="변경 의뢰 항목 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {changeRequestItemOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={changeRequestOpen} onOpenChange={setChangeRequestOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={changeRequestOpen}
+                        className="w-full justify-between h-10"
+                      >
+                        {selectedChangeRequestItems.length > 0
+                          ? `${selectedChangeRequestItems.length}개 항목 선택됨`
+                          : "변경 의뢰 항목 선택"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <div className="max-h-60 overflow-auto">
+                        <div className="p-2">
+                          {selectedChangeRequestItems.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {selectedChangeRequestItems.map((item) => (
+                                <div key={item} className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs">
+                                  <span>{item}</span>
+                                  <X
+                                    className="ml-1 h-3 w-3 cursor-pointer hover:bg-blue-200 rounded"
+                                    onClick={() => {
+                                      setSelectedChangeRequestItems(prev => 
+                                        prev.filter(i => i !== item)
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {changeRequestItemOptions.map((option) => (
+                            <div key={option} className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded">
+                              <Checkbox
+                                id={`change-item-${option}`}
+                                checked={selectedChangeRequestItems.includes(option)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedChangeRequestItems(prev => [...prev, option]);
+                                  } else {
+                                    setSelectedChangeRequestItems(prev => 
+                                      prev.filter(item => item !== option)
+                                    );
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`change-item-${option}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {option}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             )}
@@ -487,7 +539,7 @@ export default function Menu2() {
                     !selectedLineId ||
                     !selectedPpid ||
                     !selectedEqpid ||
-                    !selectedChangeRequestItem ||
+                    selectedChangeRequestItems.length === 0 ||
                     !requestTitle.trim() ||
                     !getTextFromHtml(requestContent).trim()
                   }
