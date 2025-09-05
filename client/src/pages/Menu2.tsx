@@ -286,10 +286,22 @@ export default function Menu2() {
       }
     }
 
+    // 의뢰내용에 표1/표2 HTML을 함께 포함시켜 전송
+    const excelSections: string[] = [];
+    if (excelHtml1) {
+      excelSections.push(`<div data-excel-section="1"><p><strong>표1</strong></p>${excelHtml1}</div>`);
+    }
+    if (excelHtml2) {
+      excelSections.push(`<div data-excel-section="2"><p><strong>표2</strong></p>${excelHtml2}</div>`);
+    }
+    const composedContent = excelSections.length > 0
+      ? `${requestContent}${requestContent.trim().endsWith('</p>') ? '' : ''}<p><br></p>${excelSections.join('<p><br></p>')}`
+      : requestContent;
+
     submitRequestMutation.mutate({
       department: selectedDepartment,
       title: requestTitle,
-      content: requestContent,
+      content: composedContent,
       submitted_by: user.username,
       line_id: selectedLineId,
       ppid: selectedPpid,
