@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { TestTiptapEditor } from "@/components/TestTiptapEditor";
+import ExcelClipboardBox from "@/components/excel_clipboard_box";
 
 interface EmpInfo {
   id: number;
@@ -204,16 +205,7 @@ export default function Menu2() {
     return partIds;
   };
 
-  // 공통 붙여넣기 핸들러: Excel에서 복사한 표를 HTML로 유지하여 상태에 저장
-  const handlePasteToHtml = (e: React.ClipboardEvent<HTMLDivElement>, setter: (v: string) => void) => {
-    e.preventDefault();
-    const clipboardData = e.clipboardData;
-    const html = clipboardData.getData('text/html');
-    const text = clipboardData.getData('text/plain');
-    // Excel에서 복사하면 보통 text/html로 표가 들어옴. 없으면 텍스트라도 반영
-    const content = html || (text ? `<pre>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>` : '');
-    setter(content);
-  };
+  // 기존 붙여넣기 핸들러는 ExcelClipboardBox로 대체됨
 
   // 의뢰 상신 처리
   const handleSubmitRequest = () => {
@@ -546,37 +538,19 @@ export default function Menu2() {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label>표1</Label>
-                  <div className="relative">
-                    <div
-                      role="textbox"
-                      contentEditable
-                      onPaste={(e) => handlePasteToHtml(e, setExcelHtml1)}
-                      onInput={(e) => setExcelHtml1((e.target as HTMLDivElement).innerHTML)}
-                      dangerouslySetInnerHTML={{ __html: excelHtml1 }}
-                      className="min-h-32 w-full rounded-md border border-dotted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      style={{ whiteSpace: 'normal' }}
-                    />
-                    {!excelHtml1 && (
-                      <span className="pointer-events-none absolute left-3 top-2 text-sm text-gray-400">표1을 붙여넣으세요.</span>
-                    )}
-                  </div>
+                  <ExcelClipboardBox
+                    value={excelHtml1}
+                    onChange={setExcelHtml1}
+                    placeholder="표1에 Excel 표를 붙여넣으세요."
+                  />
                 </div>
                 <div>
                   <Label>표2</Label>
-                  <div className="relative">
-                    <div
-                      role="textbox"
-                      contentEditable
-                      onPaste={(e) => handlePasteToHtml(e, setExcelHtml2)}
-                      onInput={(e) => setExcelHtml2((e.target as HTMLDivElement).innerHTML)}
-                      dangerouslySetInnerHTML={{ __html: excelHtml2 }}
-                      className="min-h-32 w-full rounded-md border border-dotted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      style={{ whiteSpace: 'normal' }}
-                    />
-                    {!excelHtml2 && (
-                      <span className="pointer-events-none absolute left-3 top-2 text-sm text-gray-400">표2을 붙여넣으세요.</span>
-                    )}
-                  </div>
+                  <ExcelClipboardBox
+                    value={excelHtml2}
+                    onChange={setExcelHtml2}
+                    placeholder="표2에 Excel 표를 붙여넣으세요."
+                  />
                 </div>
               </div>
             )}
