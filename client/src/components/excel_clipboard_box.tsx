@@ -32,8 +32,7 @@ function sanitizeExcelHtmlToSingleTable(rawHtml: string): string | null {
       // Keep inline styles from Excel; they are scoped within shadow DOM
     }
 
-    // Ensure table is visible within the box
-    tableClone.style.maxWidth = "100%";
+    // Ensure table renders cleanly; allow natural width so horizontal scroll can appear
     tableClone.style.borderCollapse = tableClone.style.borderCollapse || "collapse";
 
     return tableClone.outerHTML;
@@ -116,7 +115,7 @@ export default function ExcelClipboardBox({ value, onChange, placeholder, classN
 
   return (
     <div
-      className={`relative rounded-md border-2 border-dashed border-slate-300 min-h-32 px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring ${className || ""}`}
+      className={`relative rounded-md border-2 border-dashed border-slate-300 min-h-32 px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring overflow-x-auto ${className || ""}`}
       onPaste={handlePaste}
       onKeyDown={handleKeyDown}
       onBeforeInput={handleBeforeInput as any}
