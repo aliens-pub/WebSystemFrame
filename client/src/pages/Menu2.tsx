@@ -38,7 +38,6 @@ export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [selectedLineId, setSelectedLineId] = useState<string>("");
   const [selectedPpid, setSelectedPpid] = useState<string>("");
-  const [selectedEqpid, setSelectedEqpid] = useState<string>("");
   const [selectedChangeRequestItems, setSelectedChangeRequestItems] = useState<string[]>([]);
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
@@ -52,7 +51,6 @@ export default function Menu2() {
   // 드롭다운 옵션들
   const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
   const ppidOptions = Array.from({ length: 5 }, (_, i) => `PP-${String(i + 1).padStart(3, '0')}`);
-  const eqpidOptions = Array.from({ length: 8 }, (_, i) => `EQP-${String(i + 1).padStart(3, '0')}`);
   const changeRequestItemOptions = [
     '설정값 변경',
     '프로세스 파라미터 조정',
@@ -139,8 +137,7 @@ export default function Menu2() {
       setSelectedDepartment("");
       setSelectedLineId("");
       setSelectedPpid("");
-      setSelectedEqpid("");
-      setSelectedChangeRequestItem("");
+      setSelectedChangeRequestItems([]);
     },
     onError: (error) => {
       toast({
@@ -167,14 +164,14 @@ export default function Menu2() {
     }
   }, [emailTemplate]);
 
-  // 4개 드롭다운 선택 시 자동 제목 생성 (복수 선택 지원)
+  // Line ID, PPID, 변경 항목 선택 시 자동 제목 생성 (복수 선택 지원)
   useEffect(() => {
-    if (selectedLineId && selectedPpid && selectedEqpid && selectedChangeRequestItems.length > 0) {
+    if (selectedLineId && selectedPpid && selectedChangeRequestItems.length > 0) {
       const changeItemsText = selectedChangeRequestItems.join(', ');
-      const autoTitle = `[${selectedLineId}_${selectedPpid}_${selectedEqpid}] ${changeItemsText}`;
+      const autoTitle = `[${selectedLineId}_${selectedPpid}] ${changeItemsText}`;
       setRequestTitle(autoTitle);
     }
-  }, [selectedLineId, selectedPpid, selectedEqpid, selectedChangeRequestItems]);
+  }, [selectedLineId, selectedPpid, selectedChangeRequestItems]);
 
   // HTML에서 텍스트 내용만 추출하는 함수
   const getTextFromHtml = (html: string) => {
@@ -207,15 +204,6 @@ export default function Menu2() {
       toast({
         title: "PPID 선택 필요",
         description: "PPID를 선택해주세요.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedEqpid) {
-      toast({
-        title: "EQPID 선택 필요",
-        description: "EQPID를 선택해주세요.",
         variant: "destructive",
       });
       return;
@@ -264,7 +252,6 @@ export default function Menu2() {
       submitted_by: user.username,
       line_id: selectedLineId,
       ppid: selectedPpid,
-      eqpid: selectedEqpid,
       change_request_items: selectedChangeRequestItems.join(', '),
     });
   };
@@ -349,12 +336,15 @@ export default function Menu2() {
               </Popover>
             </div>
 
-            {/* 4개 드롭다운 선택 영역 */}
+            {/* 드롭다운/선택 영역: Line ID -> PPID (계층) + 변경 의뢰 항목 */}
             {selectedDepartment && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="line-id">Line ID</Label>
-                  <Select value={selectedLineId} onValueChange={setSelectedLineId}>
+                  <Select value={selectedLineId} onValueChange={(value) => {
+                    setSelectedLineId(value);
+                    setSelectedPpid("");
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Line ID 선택" />
                     </SelectTrigger>
@@ -371,27 +361,11 @@ export default function Menu2() {
                 <div>
                   <Label htmlFor="ppid">PPID</Label>
                   <Select value={selectedPpid} onValueChange={setSelectedPpid}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="PPID 선택" />
+                    <SelectTrigger disabled={!selectedLineId}>
+                      <SelectValue placeholder={selectedLineId ? "PPID 선택" : "Line ID 선택 후 PPID 선택"} />
                     </SelectTrigger>
                     <SelectContent>
                       {ppidOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="eqpid">EQPID</Label>
-                  <Select value={selectedEqpid} onValueChange={setSelectedEqpid}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="EQPID 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {eqpidOptions.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
                         </SelectItem>
@@ -538,7 +512,6 @@ export default function Menu2() {
                     submitRequestMutation.isPending ||
                     !selectedLineId ||
                     !selectedPpid ||
-                    !selectedEqpid ||
                     selectedChangeRequestItems.length === 0 ||
                     !requestTitle.trim() ||
                     !getTextFromHtml(requestContent).trim()
