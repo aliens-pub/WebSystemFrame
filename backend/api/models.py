@@ -76,6 +76,9 @@ class RequestSubmission(models.Model):
     ppid = models.CharField(max_length=50, blank=True, null=True, verbose_name="PPID")
     eqpid = models.CharField(max_length=50, blank=True, null=True, verbose_name="EQPID")
     change_request_items = models.CharField(max_length=200, blank=True, null=True, verbose_name="변경의뢰 항목")
+    # Excel 표를 HTML 그대로 저장
+    excel_1 = models.TextField(blank=True, null=True, verbose_name="엑셀 표1 (HTML)")
+    excel_2 = models.TextField(blank=True, null=True, verbose_name="엑셀 표2 (HTML)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='대기중', verbose_name="상태")
     assignee = models.CharField(max_length=100, blank=True, null=True, verbose_name="담당자")
     

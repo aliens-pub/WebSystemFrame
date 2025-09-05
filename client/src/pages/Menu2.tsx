@@ -43,6 +43,8 @@ export default function Menu2() {
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [changeRequestOpen, setChangeRequestOpen] = useState(false);
+  const [excelHtml1, setExcelHtml1] = useState<string>("");
+  const [excelHtml2, setExcelHtml2] = useState<string>("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -104,6 +106,8 @@ export default function Menu2() {
       ppid: string;
       eqpid: string;
       change_request_items: string;
+      excel_1?: string | null;
+      excel_2?: string | null;
     }) => {
       try {
         const response = await fetch('/api/request-submissions', {
@@ -138,6 +142,8 @@ export default function Menu2() {
       setSelectedLineId("");
       setSelectedPpid("");
       setSelectedChangeRequestItems([]);
+      setExcelHtml1("");
+      setExcelHtml2("");
     },
     onError: (error) => {
       toast({
@@ -178,6 +184,35 @@ export default function Menu2() {
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
+  };
+
+  // Excel HTML에서 Part ID 배열 추출 (셀 텍스트의 '.' 기준 분리 후 첫 파트의 끝 8글자)
+  const extractPartIdsFromExcelHtml = (html: string): string[] => {
+    if (!html) return [];
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const cells = Array.from(container.querySelectorAll('td')) as HTMLTableCellElement[];
+    const partIds: string[] = [];
+    for (const cell of cells) {
+      const raw = (cell.textContent || '').trim();
+      if (!raw) continue;
+      const firstPart = raw.split('.')[0] || '';
+      if (!firstPart) continue;
+      const last8 = firstPart.slice(-8);
+      if (last8) partIds.push(last8);
+    }
+    return partIds;
+  };
+
+  // 공통 붙여넣기 핸들러: Excel에서 복사한 표를 HTML로 유지하여 상태에 저장
+  const handlePasteToHtml = (e: React.ClipboardEvent<HTMLDivElement>, setter: (v: string) => void) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData;
+    const html = clipboardData.getData('text/html');
+    const text = clipboardData.getData('text/plain');
+    // Excel에서 복사하면 보통 text/html로 표가 들어옴. 없으면 텍스트라도 반영
+    const content = html || (text ? `<pre>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>` : '');
+    setter(content);
   };
 
   // 의뢰 상신 처리
@@ -245,6 +280,20 @@ export default function Menu2() {
       return;
     }
 
+    // Excel Part ID 검증 (excelHtml1 기준) - 값이 존재할 때만 수행
+    const parsedPartIds = extractPartIdsFromExcelHtml(excelHtml1);
+    if (parsedPartIds.length > 0) {
+      const allMatch = parsedPartIds.every(pid => pid === selectedPpid);
+      if (!allMatch) {
+        toast({
+          title: "Part ID 불일치 발견",
+          description: "붙여넣은 표의 Part ID가 선택한 PPID와 일치하지 않습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     submitRequestMutation.mutate({
       department: selectedDepartment,
       title: requestTitle,
@@ -253,6 +302,8 @@ export default function Menu2() {
       line_id: selectedLineId,
       ppid: selectedPpid,
       change_request_items: selectedChangeRequestItems.join(', '),
+      excel_1: excelHtml1 || null,
+      excel_2: excelHtml2 || null,
     });
   };
 
@@ -490,6 +541,46 @@ export default function Menu2() {
               </div>
             )}
 
+            {/* Excel 표 입력 박스들 */}
+            {selectedDepartment && (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label>표1</Label>
+                  <div className="relative">
+                    <div
+                      role="textbox"
+                      contentEditable
+                      onPaste={(e) => handlePasteToHtml(e, setExcelHtml1)}
+                      onInput={(e) => setExcelHtml1((e.target as HTMLDivElement).innerHTML)}
+                      dangerouslySetInnerHTML={{ __html: excelHtml1 }}
+                      className="min-h-32 w-full rounded-md border border-dotted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      style={{ whiteSpace: 'normal' }}
+                    />
+                    {!excelHtml1 && (
+                      <span className="pointer-events-none absolute left-3 top-2 text-sm text-gray-400">표1을 붙여넣으세요.</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <Label>표2</Label>
+                  <div className="relative">
+                    <div
+                      role="textbox"
+                      contentEditable
+                      onPaste={(e) => handlePasteToHtml(e, setExcelHtml2)}
+                      onInput={(e) => setExcelHtml2((e.target as HTMLDivElement).innerHTML)}
+                      dangerouslySetInnerHTML={{ __html: excelHtml2 }}
+                      className="min-h-32 w-full rounded-md border border-dotted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      style={{ whiteSpace: 'normal' }}
+                    />
+                    {!excelHtml2 && (
+                      <span className="pointer-events-none absolute left-3 top-2 text-sm text-gray-400">표2을 붙여넣으세요.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 상신자 정보 */}
             {isAuthenticated && user && (
               <div>
@@ -514,7 +605,8 @@ export default function Menu2() {
                     !selectedPpid ||
                     selectedChangeRequestItems.length === 0 ||
                     !requestTitle.trim() ||
-                    !getTextFromHtml(requestContent).trim()
+                    !getTextFromHtml(requestContent).trim() ||
+                    (!excelHtml1 && !excelHtml2)
                   }
                   className="min-w-[120px]"
                 >
