@@ -46,6 +46,8 @@ export const requestSubmissionSchema = z.object({
   ppid: z.string().nullable(),
   eqpid: z.string().nullable(),
   change_request_items: z.string().nullable(),
+  excel_1: z.string().nullable().optional(),
+  excel_2: z.string().nullable().optional(),
   status: z.string(),
   assignee: z.string().nullable(),
 });
