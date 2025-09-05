@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { TestTiptapEditor } from "@/components/TestTiptapEditor";
+import ExcelPasteBox from "@/components/ExcelPasteBox";
 
 interface EmpInfo {
   id: number;
@@ -43,6 +44,8 @@ export default function Menu2() {
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [changeRequestOpen, setChangeRequestOpen] = useState(false);
+  const [table1Html, setTable1Html] = useState<string>("");
+  const [table2Html, setTable2Html] = useState<string>("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -453,6 +456,32 @@ export default function Menu2() {
                   placeholder="의뢰 제목을 입력하세요"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+              </div>
+            )}
+
+            {/* 표 입력 박스 (두 개, Excel 전용) */}
+            {selectedDepartment && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>표 1</Label>
+                  <ExcelPasteBox
+                    id="excel-table-1"
+                    ariaLabel="표 1 Excel 붙여넣기"
+                    value={table1Html}
+                    onChange={setTable1Html}
+                    placeholder="표 1에 Excel 표를 붙여넣으세요 (Ctrl+V)"
+                  />
+                </div>
+                <div>
+                  <Label>표 2</Label>
+                  <ExcelPasteBox
+                    id="excel-table-2"
+                    ariaLabel="표 2 Excel 붙여넣기"
+                    value={table2Html}
+                    onChange={setTable2Html}
+                    placeholder="표 2에 Excel 표를 붙여넣으세요 (Ctrl+V)"
+                  />
+                </div>
               </div>
             )}
 
