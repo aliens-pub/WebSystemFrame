@@ -25,7 +25,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -256,6 +256,10 @@ export default function Menu1() {
   // 모달 상태 관리
   const [selectedSubmission, setSelectedSubmission] = useState<RequestSubmission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalSize, setModalSize] = useState({ width: 800, height: 600 });
+  const [isResizing, setIsResizing] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // 의뢰 상신 목록 조회
   const { data: submissionsData, isLoading } = useQuery<RequestSubmissionResponse>({
@@ -382,6 +386,44 @@ export default function Menu1() {
     setIsModalOpen(false);
     setSelectedSubmission(null);
   };
+
+  // 모달 리사이즈 핸들러 - 테두리 드래그로 변경
+  const handleBorderMouseDown = useCallback((e: React.MouseEvent) => {
+    // 헤더나 버튼 영역에서는 리사이즈 방지
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('.modal-header')) return;
+    
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: modalSize.width,
+      height: modalSize.height,
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeStartRef.current) return;
+      
+      const deltaX = e.clientX - resizeStartRef.current.x;
+      const deltaY = e.clientY - resizeStartRef.current.y;
+      
+      const newWidth = Math.max(500, resizeStartRef.current.width + deltaX);
+      const newHeight = Math.max(400, resizeStartRef.current.height + deltaY);
+      
+      setModalSize({ width: newWidth, height: newHeight });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      resizeStartRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [modalSize]);
 
   // CSV 다운로드 함수
   const downloadCSV = () => {
@@ -738,131 +780,168 @@ export default function Menu1() {
         </Table>
       </div>
 
-      {/* 상세 보기 모달 */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>의뢰 상신 상세 정보</DialogTitle>
-          </DialogHeader>
-          {selectedSubmission && (
-            <>
-              <ScrollArea className="max-h-[80vh]">
-                <div className="space-y-6 p-4">
-                {/* 기본 정보 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Line ID</label>
-                    <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-sm">
-                      {selectedSubmission.line_id || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">PPID</label>
-                    <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-sm">
-                      {selectedSubmission.ppid || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">EQPID</label>
-                    <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-sm">
-                      {selectedSubmission.eqpid || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">변경의뢰 항목</label>
-                    <div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-                      {selectedSubmission.change_request_items || '-'}
-                    </div>
-                  </div>
-                </div>
+      {/* 상세 보기 모달 - 테두리 드래그로 리사이즈 가능 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div 
+            ref={modalRef}
+            className="bg-white rounded-lg border shadow-lg relative select-none"
+            style={{ 
+              width: `${modalSize.width}px`, 
+              height: `${modalSize.height}px`,
+              cursor: isResizing ? 'nw-resize' : 'default'
+            }}
+            onMouseDown={handleBorderMouseDown}
+          >
+            {/* 헤더 */}
+            <div className="modal-header flex items-center justify-between p-3 border-b bg-gray-50 rounded-t-lg">
+              <h2 className="text-lg font-semibold">의뢰 상신 상세 정보</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeModal}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-                {/* 제목 및 설명 */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700">제목</label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded text-sm">
-                    {selectedSubmission.title}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">상세 내용</label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded text-sm whitespace-pre-wrap">
-                    <div dangerouslySetInnerHTML={{ __html: selectedSubmission.content || '내용이 없습니다.' }} />
-                  </div>
-                </div>
-
-                {/* 상신 정보 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">상신자</label>
-                    <div className="mt-1">
-                      <Badge variant="outline">{selectedSubmission.submitted_by}</Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">상신일시</label>
-                    <div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-                      {formatDate(selectedSubmission.submitted_at)}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">상태</label>
-                    <div className="mt-1">
-                      <Badge 
-                        variant={
-                          selectedSubmission.status === '완료' ? 'default' :
-                          selectedSubmission.status === '진행중' ? 'secondary' :
-                          'outline'
-                        }
-                      >
-                        {selectedSubmission.status || '대기중'}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">담당자</label>
-                    <div className="mt-1">
-                      {selectedSubmission.assignee ? (
-                        <Badge variant="secondary">{selectedSubmission.assignee}</Badge>
-                      ) : (
-                        <span className="text-gray-500 text-sm">미지정</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                  {/* 부서 정보 */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">부서</label>
-                    <div className="mt-1">
-                      <Badge variant="outline">{selectedSubmission.department}</Badge>
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
-
-              {/* 삭제 버튼 - 현재 사용자와 의뢰자가 일치할 때만 표시 */}
-              {user && selectedSubmission.submitted_by === user.username && (
-                <div className="flex justify-end mt-4 pt-4 border-t">
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => {
-                      if (confirm('정말로 이 의뢰를 삭제하시겠습니까? 삭제된 의뢰는 복구할 수 없습니다.')) {
-                        deleteSubmissionMutation.mutate(selectedSubmission.id);
-                      }
-                    }}
-                    disabled={deleteSubmissionMutation.isPending}
-                    className="gap-2"
+            {selectedSubmission && (
+              <>
+                {/* 컨텐츠 영역 - 스크롤 가능 */}
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea 
+                    className="h-full p-3" 
+                    style={{ height: `${modalSize.height - 110}px` }}
                   >
-                    <Trash2 className="h-4 w-4" />
-                    {deleteSubmissionMutation.isPending ? '삭제 중...' : '삭제'}
-                  </Button>
+                    <div className="space-y-2">
+                      {/* 첫 번째 줄: Line ID(1/3), PPID(1/3), 상신자, 상태, 부서, 상신일시, 담당자 */}
+                      <div className="grid grid-cols-7 gap-2 items-end">
+                        {/* Line ID - 1/3 너비 */}
+                        <div className="col-span-1">
+                          <label className="text-xs font-medium text-gray-600">Line ID</label>
+                          <div className="mt-1 p-1 bg-gray-50 rounded font-mono text-xs">
+                            {selectedSubmission.line_id || '-'}
+                          </div>
+                        </div>
+                        {/* PPID - 1/3 너비 */}
+                        <div className="col-span-1">
+                          <label className="text-xs font-medium text-gray-600">PPID</label>
+                          <div className="mt-1 p-1 bg-gray-50 rounded font-mono text-xs">
+                            {selectedSubmission.ppid || '-'}
+                          </div>
+                        </div>
+                        {/* 상신자 */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">상신자</label>
+                          <div className="mt-1">
+                            <Badge variant="outline" className="text-xs px-1 py-0">{selectedSubmission.submitted_by}</Badge>
+                          </div>
+                        </div>
+                        {/* 상태 */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">상태</label>
+                          <div className="mt-1">
+                            <Badge 
+                              variant={
+                                selectedSubmission.status === '완료' ? 'default' :
+                                selectedSubmission.status === '진행중' ? 'secondary' :
+                                'outline'
+                              }
+                              className="text-xs px-1 py-0"
+                            >
+                              {selectedSubmission.status || '대기중'}
+                            </Badge>
+                          </div>
+                        </div>
+                        {/* 부서 */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">부서</label>
+                          <div className="mt-1">
+                            <Badge variant="outline" className="text-xs px-1 py-0">{selectedSubmission.department}</Badge>
+                          </div>
+                        </div>
+                        {/* 상신일시 */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">상신일시</label>
+                          <div className="mt-1 p-1 bg-gray-50 rounded text-xs">
+                            {formatDate(selectedSubmission.submitted_at)}
+                          </div>
+                        </div>
+                        {/* 담당자 */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">담당자</label>
+                          <div className="mt-1">
+                            {selectedSubmission.assignee ? (
+                              <Badge variant="secondary" className="text-xs px-1 py-0">{selectedSubmission.assignee}</Badge>
+                            ) : (
+                              <span className="text-gray-500 text-xs">미지정</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 두 번째 줄: 변경의뢰 항목 */}
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">변경의뢰 항목</label>
+                        <div className="mt-1 p-1.5 bg-gray-50 rounded text-xs">
+                          {selectedSubmission.change_request_items || '-'}
+                        </div>
+                      </div>
+
+                      {/* 제목 */}
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">제목</label>
+                        <div className="mt-1 p-2 bg-gray-50 rounded text-sm">
+                          {selectedSubmission.title}
+                        </div>
+                      </div>
+
+                      {/* 상세 내용 - 스크롤 가능한 영역으로 변경 */}
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">상세 내용</label>
+                        <div className="mt-1 border rounded bg-white">
+                          <ScrollArea className="max-h-40 p-2">
+                            <div 
+                              className="text-sm whitespace-pre-wrap overflow-auto"
+                              dangerouslySetInnerHTML={{ 
+                                __html: selectedSubmission.content || '내용이 없습니다.' 
+                              }} 
+                            />
+                          </ScrollArea>
+                        </div>
+                      </div>
+                    </div>
+                  </ScrollArea>
                 </div>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+
+                {/* 하단 버튼 영역 */}
+                <div className="border-t p-3 bg-gray-50 rounded-b-lg">
+                  <div className="flex justify-end items-center">
+                    {/* 삭제 버튼 - 현재 사용자와 의뢰자가 일치할 때만 표시 */}
+                    {user && selectedSubmission.submitted_by === user.username && (
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => {
+                          if (confirm('정말로 이 의뢰를 삭제하시겠습니까? 삭제된 의뢰는 복구할 수 없습니다.')) {
+                            deleteSubmissionMutation.mutate(selectedSubmission.id);
+                          }
+                        }}
+                        disabled={deleteSubmissionMutation.isPending}
+                        className="gap-1"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {deleteSubmissionMutation.isPending ? '삭제 중...' : '삭제'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
