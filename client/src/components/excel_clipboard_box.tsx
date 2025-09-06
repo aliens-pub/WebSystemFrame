@@ -14,26 +14,68 @@ function sanitizeExcelHtmlToSingleTable(rawHtml: string): string | null {
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawHtml, "text/html");
 
-    // Remove global-affecting tags
-    doc.querySelectorAll("style, link, meta, script, xml").forEach((el) => el.remove());
-
     // Prefer the first table inside the fragment
     const table = doc.querySelector("table");
     if (!table) return null;
 
-    // Clone to detach from source document
+    // Clone to detach from source document and preserve classes/styles for computed style inlining
     const tableClone = table.cloneNode(true) as HTMLElement;
 
-    // Remove ids/classes that could collide across pastes
-    const elements = [tableClone, ...Array.from(tableClone.querySelectorAll("*"))] as HTMLElement[];
-    for (const el of elements) {
+    // Build a hidden sandbox to compute styles (include any <style> from source)
+    const sandbox = document.createElement("div");
+    sandbox.style.position = "fixed";
+    sandbox.style.left = "-99999px";
+    sandbox.style.top = "-99999px";
+    sandbox.style.visibility = "hidden";
+    // Append source <style> tags to sandbox for accurate computed styles
+    const sourceStyles = Array.from(doc.querySelectorAll("style"));
+    for (const s of sourceStyles) {
+      const styleEl = document.createElement("style");
+      styleEl.textContent = s.textContent || "";
+      sandbox.appendChild(styleEl);
+    }
+    // Append the cloned table with its class-based styling intact
+    sandbox.appendChild(tableClone);
+    document.body.appendChild(sandbox);
+
+    // Inline a curated set of computed styles to preserve Excel formatting
+    const inlineTargets = [tableClone, ...Array.from(tableClone.querySelectorAll("*"))] as HTMLElement[];
+    const styleProps = [
+      // borders
+      "borderTop", "borderRight", "borderBottom", "borderLeft", "borderCollapse",
+      // background & text
+      "backgroundColor", "color", "fontWeight", "fontStyle", "textDecoration",
+      // font
+      "fontSize", "fontFamily",
+      // alignment
+      "textAlign", "verticalAlign", "whiteSpace",
+      // spacing & size
+      "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+      "width", "height"
+    ] as const;
+
+    for (const el of inlineTargets) {
+      const cs = getComputedStyle(el);
+      let styleText = el.getAttribute("style") || "";
+      for (const prop of styleProps) {
+        const value = (cs as any)[prop];
+        if (value) {
+          // Convert camelCase to kebab-case for CSS property names
+          const kebab = prop.replace(/[A-Z]/g, m => "-" + m.toLowerCase());
+          styleText += `${kebab}:${value};`;
+        }
+      }
+      el.setAttribute("style", styleText);
+      // Remove ids/classes to avoid collisions in composed content
       el.removeAttribute("id");
       el.removeAttribute("class");
-      // Keep inline styles from Excel; they are scoped within shadow DOM
     }
 
     // Ensure table renders cleanly; allow natural width so horizontal scroll can appear
     tableClone.style.borderCollapse = tableClone.style.borderCollapse || "collapse";
+
+    // Cleanup sandbox
+    document.body.removeChild(sandbox);
 
     return tableClone.outerHTML;
   } catch (e) {
