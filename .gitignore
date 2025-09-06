@@ -14,9 +14,11 @@ env3
 sqlite3.db
 *.sqlite3
 *.log
+*.pyc
 *.pot
 *.pyo
 *.pyd
 *.swp
 *.swo
 migrations/
+db.sqlite3
