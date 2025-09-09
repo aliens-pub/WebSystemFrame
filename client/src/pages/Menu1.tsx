@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -17,7 +20,8 @@ import {
   ArrowDown,
   Check,
   X,
-  Download
+  Download,
+  Send
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
@@ -247,6 +251,11 @@ export default function Menu1() {
   // 모달 상태 관리
   const [selectedSubmission, setSelectedSubmission] = useState<RequestSubmission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // 코멘트 모달 상태 관리
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [pendingAssigneeUpdate, setPendingAssigneeUpdate] = useState<{id: number; assignee: string} | null>(null);
+  const [comment, setComment] = useState("");
 
   // 의뢰 상신 목록 조회
   const { data: submissionsData, isLoading } = useQuery<RequestSubmissionResponse>({
@@ -260,13 +269,21 @@ export default function Menu1() {
     }
   });
 
-  // 담당자 업데이트 뮤테이션
+  // 담당자 업데이트 뮤테이션 (코멘트 포함)
   const updateAssigneeMutation = useMutation({
-    mutationFn: async ({ id, assignee }: { id: number; assignee: string }) => {
-      return await apiRequest("PATCH", `/api/request-submissions/${id}`, { assignee });
+    mutationFn: async ({ id, assignee, comment }: { id: number; assignee: string; comment?: string }) => {
+      const payload: { assignee: string; comment?: string } = { assignee };
+      if (comment) {
+        payload.comment = comment;
+      }
+      return await apiRequest("PATCH", `/api/request-submissions/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/request-submissions'] });
+      // 모달 닫기 및 상태 초기화
+      setIsCommentModalOpen(false);
+      setPendingAssigneeUpdate(null);
+      setComment("");
     },
   });
 
@@ -337,7 +354,27 @@ export default function Menu1() {
   };
 
   const handleAssigneeChange = (id: number, assignee: string) => {
-    updateAssigneeMutation.mutate({ id, assignee });
+    // 코멘트 모달을 띄우기 전에 대기 중인 업데이트 정보 저장
+    setPendingAssigneeUpdate({ id, assignee });
+    setIsCommentModalOpen(true);
+  };
+  
+  // 코멘트 모달에서 전송 버튼 클릭 핸들러
+  const handleCommentSubmit = () => {
+    if (pendingAssigneeUpdate) {
+      updateAssigneeMutation.mutate({
+        id: pendingAssigneeUpdate.id,
+        assignee: pendingAssigneeUpdate.assignee,
+        comment: comment.trim() || undefined
+      });
+    }
+  };
+  
+  // 코멘트 모달 닫기 핸들러
+  const handleCommentModalClose = () => {
+    setIsCommentModalOpen(false);
+    setPendingAssigneeUpdate(null);
+    setComment("");
   };
 
   // 상세 보기 모달 핸들러
@@ -712,6 +749,49 @@ export default function Menu1() {
         onClose={closeModal}
         submission={selectedSubmission}
       />
+      
+      {/* 코멘트 모달 */}
+      <Dialog open={isCommentModalOpen} onOpenChange={handleCommentModalClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>코멘트</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {pendingAssigneeUpdate && (
+              <div className="text-sm text-gray-600">
+                담당자를 <strong>{pendingAssigneeUpdate.assignee}</strong>로 업데이트합니다.
+              </div>
+            )}
+            <div>
+              <Label htmlFor="comment">코멘트 (선택사항)</Label>
+              <Textarea
+                id="comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="코멘트를 입력하세요..."
+                className="min-h-[100px] mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCommentModalClose}
+              disabled={updateAssigneeMutation.isPending}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleCommentSubmit}
+              disabled={updateAssigneeMutation.isPending}
+              className="gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {updateAssigneeMutation.isPending ? "전송 중..." : "전송"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
