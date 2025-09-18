@@ -9,12 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Send, FileText, Users, Check, ChevronsUpDown, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { TestTiptapEditor } from "@/components/TestTiptapEditor";
 import ExcelClipboardBox from "@/components/excel_clipboard_box";
 import CreateTableButton from "@/components/CreateTableButton";
+import { NotifyMemberSelector, type NotifyMember } from "@/components/NotifyMemberSelector";
 import { ExcelTemplateLinkButton } from "@/components/ExcelTemplateLinkButton";
 
 interface EmpInfo {
@@ -22,6 +23,8 @@ interface EmpInfo {
   name: string;
   department: string;
   emp_id: string;
+  knox_id?: string;
+  part?: string;
   created_at: string;
   updated_at: string;
 }
@@ -100,6 +103,31 @@ export default function Menu2() {
       return response.json();
     },
   });
+
+  const [selectedNotifyMembers, setSelectedNotifyMembers] = useState<NotifyMember[]>([]);
+
+  const notifyMembers = useMemo<NotifyMember[]>(() => {
+    if (!selectedDepartment) {
+      return [];
+    }
+
+    return (
+      empInfos
+        ?.filter((emp) => {
+          const dept = emp.department ?? emp.part;
+          return dept === selectedDepartment;
+        })
+        .map((emp) => ({
+          knox_id: emp.knox_id ?? emp.emp_id ?? String(emp.id),
+          name: emp.name,
+        })) ?? []
+    );
+  }, [empInfos, selectedDepartment]);
+
+  useEffect(() => {
+    setSelectedNotifyMembers(notifyMembers);
+  }, [notifyMembers]);
+
 
 
   // 의뢰 상신 mutation
@@ -636,6 +664,15 @@ export default function Menu2() {
                   />
                 </div>
               </div>
+            )}
+
+            {/* 통보처 */}
+            {selectedDepartment && (
+              <NotifyMemberSelector
+                members={notifyMembers}
+                value={selectedNotifyMembers}
+                onChange={setSelectedNotifyMembers}
+              />
             )}
 
             {/* 상신자 정보 */}
