@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { TestTiptapEditor } from "@/components/TestTiptapEditor";
 import ExcelClipboardBox from "@/components/excel_clipboard_box";
 import CreateTableButton from "@/components/CreateTableButton";
+import { ExcelTemplateLinkButton } from "@/components/ExcelTemplateLinkButton";
 
 interface EmpInfo {
   id: number;
@@ -624,7 +625,10 @@ export default function Menu2() {
                   />
                 </div>
                 <div>
-                  <Label>표2</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>표2</Label>
+                    <ExcelTemplateLinkButton url="https://test.com" />
+                  </div>
                   <ExcelClipboardBox
                     value={excelHtml2}
                     onChange={setExcelHtml2}
