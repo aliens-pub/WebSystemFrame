@@ -24,8 +24,8 @@ import {
   Send
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
-import { format } from "date-fns";
+import { useState, useMemo, useEffect } from "react";
+import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -239,6 +239,18 @@ function AssigneeCell({
 
 export default function Menu1() {
   const queryClient = useQueryClient();
+  const parseDateParam = (value: string | null): Date | undefined => {
+    if (!value) return undefined;
+    const parsed = parseISO(value);
+    return isValid(parsed) ? parsed : undefined;
+  };
+
+  const isSameDate = (a?: Date, b?: Date) => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return a.getTime() === b.getTime();
+  };
+
   const [filters, setFilters] = useState<FilterState>({
     searchTerm: "",
     dateFilter: {
@@ -247,7 +259,93 @@ export default function Menu1() {
     },
     columnFilters: []
   });
-  
+  const [isFilterInitialized, setIsFilterInitialized] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+
+  useEffect(() => {
+    setSearchInput(filters.searchTerm);
+  }, [filters.searchTerm]);
+
+  const applySearchTerm = () => {
+    setFilters(prev => {
+      if (prev.searchTerm === searchInput) {
+        return prev;
+      }
+      return {
+        ...prev,
+        searchTerm: searchInput
+      };
+    });
+    setAppliedSearchTerm(searchInput);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const searchParam = params.get("search") ?? "";
+    const fromDate = parseDateParam(params.get("from"));
+    const toDate = parseDateParam(params.get("to"));
+
+    setFilters(prev => {
+      const sameSearch = prev.searchTerm === searchParam;
+      const sameFrom = isSameDate(prev.dateFilter.from, fromDate);
+      const sameTo = isSameDate(prev.dateFilter.to, toDate);
+
+      if (sameSearch && sameFrom && sameTo) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        searchTerm: searchParam,
+        dateFilter: {
+          from: fromDate,
+          to: toDate
+        }
+      };
+    });
+
+    setAppliedSearchTerm(searchParam);
+    setIsFilterInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isFilterInitialized || typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (appliedSearchTerm) {
+      params.set("search", appliedSearchTerm);
+    } else {
+      params.delete("search");
+    }
+
+    const fromValue = filters.dateFilter.from ? format(filters.dateFilter.from, "yyyy-MM-dd") : null;
+    const toValue = filters.dateFilter.to ? format(filters.dateFilter.to, "yyyy-MM-dd") : null;
+
+    if (fromValue) {
+      params.set("from", fromValue);
+    } else {
+      params.delete("from");
+    }
+
+    if (toValue) {
+      params.set("to", toValue);
+    } else {
+      params.delete("to");
+    }
+
+    const newSearch = params.toString();
+    const currentSearch = window.location.search.replace(/^\?/, "");
+
+    if (newSearch !== currentSearch) {
+      const newUrl = newSearch ? `${window.location.pathname}?${newSearch}` : window.location.pathname;
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [appliedSearchTerm, filters.dateFilter.from, filters.dateFilter.to, isFilterInitialized]);
+
   // 모달 상태 관리
   const [selectedSubmission, setSelectedSubmission] = useState<RequestSubmission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -458,12 +556,20 @@ export default function Menu1() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="검색..."
-            value={filters.searchTerm}
-            onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                applySearchTerm();
+              }
+            }}
             className="pl-10"
           />
         </div>
-        
+
+        <Button variant="outline" onClick={applySearchTerm} className="shrink-0">Search</Button>
+
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
