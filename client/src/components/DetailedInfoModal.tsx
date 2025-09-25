@@ -2,13 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Trash2 } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
 interface RequestSubmission {
   id: number;
@@ -21,6 +22,7 @@ interface RequestSubmission {
   ppid?: string;
   eqpid?: string;
   change_request_items?: string;
+  max_tat?: number;
   status?: string;
   assignee?: string;
 }
@@ -29,18 +31,20 @@ interface DetailedInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   submission: RequestSubmission | null;
+  onSubmissionUpdate?: (submission: RequestSubmission) => void;
 }
 
-export default function DetailedInfoModal({ isOpen, onClose, submission }: DetailedInfoModalProps) {
+export default function DetailedInfoModal({ isOpen, onClose, submission, onSubmissionUpdate }: DetailedInfoModalProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [modalSize, setModalSize] = useState({ width: 800, height: 600 });
   const [isResizing, setIsResizing] = useState(false);
   const [cursorStyle, setCursorStyle] = useState('default');
   const modalRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [maxTatInput, setMaxTatInput] = useState<string>("");
 
   // 삭제 뮤테이션
   const deleteSubmissionMutation = useMutation({
@@ -63,6 +67,67 @@ export default function DetailedInfoModal({ isOpen, onClose, submission }: Detai
       });
     }
   });
+
+  const updateMaxTatMutation = useMutation({
+    mutationFn: async ({ id, maxTat }: { id: number; maxTat: number | null }) => {
+      const response = await apiRequest("PATCH", `/api/request-submissions/${id}`, {
+        max_tat: maxTat,
+      });
+      return await response.json();
+    },
+    onSuccess: (updated: RequestSubmission) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/request-submissions'] });
+      setMaxTatInput(updated.max_tat != null ? String(updated.max_tat) : "");
+      onSubmissionUpdate?.(updated);
+      toast({
+        title: "Max TAT가 업데이트되었습니다.",
+        description: "변경 사항이 저장되었습니다.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Max TAT 업데이트 실패",
+        description: error.message || "Max TAT를 업데이트하는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (submission) {
+      setMaxTatInput(submission.max_tat != null ? String(submission.max_tat) : "");
+    } else {
+      setMaxTatInput("");
+    }
+  }, [submission?.id, submission?.max_tat]);
+
+  const parsedMaxTat = useMemo(() => {
+    const trimmed = maxTatInput.trim();
+    if (trimmed === "") return null;
+    if (!/^\d+$/.test(trimmed)) return NaN;
+    return Number(trimmed);
+  }, [maxTatInput]);
+
+  const isMaxTatValid = parsedMaxTat === null || (!Number.isNaN(parsedMaxTat) && parsedMaxTat >= 0);
+  const originalMaxTat = submission?.max_tat ?? null;
+  const isMaxTatDirty = submission ? parsedMaxTat !== originalMaxTat : false;
+
+  const handleMaxTatSave = () => {
+    if (!submission) return;
+    if (!isMaxTatValid || Number.isNaN(parsedMaxTat ?? undefined)) {
+      toast({
+        title: "유효하지 않은 값",
+        description: "Max TAT는 0 이상의 정수로 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateMaxTatMutation.mutate({
+      id: submission.id,
+      maxTat: parsedMaxTat,
+    });
+  };
 
   // 커서 스타일 감지 함수
   const getCursorStyle = useCallback((e: React.MouseEvent) => {
@@ -262,6 +327,33 @@ export default function DetailedInfoModal({ isOpen, onClose, submission }: Detai
                 <div className="mt-1 p-1.5 bg-gray-50 rounded text-xs">
                   {submission.change_request_items || '-'}
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600">Max TAT</label>
+                <div className="mt-1 flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={maxTatInput}
+                    onChange={(event) => setMaxTatInput(event.target.value)}
+                    className="h-8 w-32 text-sm"
+                    placeholder="미입력"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleMaxTatSave}
+                    disabled={!isMaxTatValid || !isMaxTatDirty || updateMaxTatMutation.isPending}
+                  >
+                    {updateMaxTatMutation.isPending ? "저장 중..." : "저장"}
+                  </Button>
+                  <span className="text-xs text-gray-500">일</span>
+                </div>
+                {!isMaxTatValid && (
+                  <p className="mt-1 text-[11px] text-red-500">숫자만 입력할 수 있습니다.</p>
+                )}
               </div>
 
               {/* 제목 */}

@@ -79,6 +79,7 @@ class RequestSubmission(models.Model):
     # Excel 표를 HTML 그대로 저장
     excel_1 = models.TextField(blank=True, null=True, verbose_name="엑셀 표1 (HTML)")
     excel_2 = models.TextField(blank=True, null=True, verbose_name="엑셀 표2 (HTML)")
+    max_tat = models.IntegerField(blank=True, null=True, verbose_name="Max TAT", help_text="선택된 변경 항목 중 가장 긴 표준 TAT")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='대기중', verbose_name="상태")
     assignee = models.CharField(max_length=100, blank=True, null=True, verbose_name="담당자")
     

@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Send, FileText, Users, Check, ChevronsUpDown, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { TestTiptapEditor } from "@/components/TestTiptapEditor";
@@ -17,6 +17,7 @@ import ExcelClipboardBox from "@/components/excel_clipboard_box";
 import CreateTableButton from "@/components/CreateTableButton";
 import { NotifyMemberSelector, type NotifyMember } from "@/components/NotifyMemberSelector";
 import { ExcelTemplateLinkButton } from "@/components/ExcelTemplateLinkButton";
+import { ChangeRequestItemSelector, type ChangeRequestOption } from "@/components/SearchableSelect";
 
 interface EmpInfo {
   id: number;
@@ -40,6 +41,12 @@ interface CommonTemplate {
   updated_at: string;
 }
 
+interface GuideDbItem {
+  id: number;
+  item: string;
+  standard_TAT: number;
+}
+
 
 export default function Menu2() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
@@ -50,10 +57,10 @@ export default function Menu2() {
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [requestContent, setRequestContent] = useState<string>("");
   const [open, setOpen] = useState(false);
-  const [changeRequestOpen, setChangeRequestOpen] = useState(false);
   const [approverOpen, setApproverOpen] = useState(false);
   const [excelHtml1, setExcelHtml1] = useState<string>("");
   const [excelHtml2, setExcelHtml2] = useState<string>("");
+  const [maxTat, setMaxTat] = useState<number | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,7 +69,7 @@ export default function Menu2() {
   // 드롭다운 옵션들
   const lineIdOptions = Array.from({ length: 10 }, (_, i) => `LINE-${String(i + 1).padStart(3, '0')}`);
   const ppidOptions = Array.from({ length: 5 }, (_, i) => `PP-${String(i + 1).padStart(3, '0')}`);
-  const changeRequestItemOptions = [
+  const fallbackChangeRequestItemOptions = [
     '설정값 변경',
     '프로세스 파라미터 조정',
     '레시피 수정',
@@ -104,6 +111,30 @@ export default function Menu2() {
     },
   });
 
+  const { data: guideDbItems } = useQuery<GuideDbItem[]>({
+    queryKey: ['/api/guide-db'],
+    queryFn: async () => {
+      const response = await fetch('/api/guide-db', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Guide DB 정보를 불러오는데 실패했습니다.');
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const changeRequestOptions = useMemo<ChangeRequestOption[]>(() => {
+    if (guideDbItems && guideDbItems.length > 0) {
+      return guideDbItems.map(item => ({
+        name: item.item,
+        standardTat: item.standard_TAT ?? null
+      }));
+    }
+    return fallbackChangeRequestItemOptions.map(name => ({ name }));
+  }, [guideDbItems]);
+
   const [selectedNotifyMembers, setSelectedNotifyMembers] = useState<NotifyMember[]>([]);
 
   const notifyMembers = useMemo<NotifyMember[]>(() => {
@@ -139,10 +170,11 @@ export default function Menu2() {
       submitted_by: string;
       line_id: string;
       ppid: string;
-      eqpid: string;
+      eqpid?: string;
       change_request_items: string;
       excel_1?: string | null;
       excel_2?: string | null;
+      max_tat?: number | null;
     }) => {
       try {
         const response = await fetch('/api/request-submissions', {
@@ -179,6 +211,7 @@ export default function Menu2() {
       setSelectedChangeRequestItems([]);
       setExcelHtml1("");
       setExcelHtml2("");
+      setMaxTat(null);
     },
     onError: (error) => {
       toast({
@@ -188,6 +221,14 @@ export default function Menu2() {
       });
     },
   });
+
+  const handleChangeRequestSelection = useCallback((items: string[]) => {
+    setSelectedChangeRequestItems(items);
+  }, []);
+
+  const handleMaxTatChange = useCallback((value: number | null) => {
+    setMaxTat(value);
+  }, []);
 
   // 부서 목록 추출
   const departments = empInfos
@@ -352,6 +393,7 @@ export default function Menu2() {
       change_request_items: selectedChangeRequestItems.join(', '),
       excel_1: excelHtml1 || null,
       excel_2: excelHtml2 || null,
+      max_tat: maxTat ?? null,
     });
   };
 
@@ -475,67 +517,15 @@ export default function Menu2() {
 
                 <div>
                   <Label htmlFor="change-request-item">변경 의뢰 항목</Label>
-                  <Popover open={changeRequestOpen} onOpenChange={setChangeRequestOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={changeRequestOpen}
-                        className="w-full justify-between h-10"
-                      >
-                        {selectedChangeRequestItems.length > 0
-                          ? `${selectedChangeRequestItems.length}개 항목 선택됨`
-                          : "변경 의뢰 항목 선택"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <div className="max-h-60 overflow-auto">
-                        <div className="p-2">
-                          {selectedChangeRequestItems.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {selectedChangeRequestItems.map((item) => (
-                                <div key={item} className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs">
-                                  <span>{item}</span>
-                                  <X
-                                    className="ml-1 h-3 w-3 cursor-pointer hover:bg-blue-200 rounded"
-                                    onClick={() => {
-                                      setSelectedChangeRequestItems(prev => 
-                                        prev.filter(i => i !== item)
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {changeRequestItemOptions.map((option) => (
-                            <div key={option} className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded">
-                              <Checkbox
-                                id={`change-item-${option}`}
-                                checked={selectedChangeRequestItems.includes(option)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedChangeRequestItems(prev => [...prev, option]);
-                                  } else {
-                                    setSelectedChangeRequestItems(prev => 
-                                      prev.filter(item => item !== option)
-                                    );
-                                  }
-                                }}
-                              />
-                              <Label
-                                htmlFor={`change-item-${option}`}
-                                className="text-sm cursor-pointer flex-1"
-                              >
-                                {option}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <ChangeRequestItemSelector
+                    options={changeRequestOptions}
+                    selectedItems={selectedChangeRequestItems}
+                    onSelectionChange={handleChangeRequestSelection}
+                    onMaxTatChange={handleMaxTatChange}
+                  />
+                  <div className="mt-2 text-sm text-gray-600">
+                    Max TAT: {maxTat != null ? `${maxTat}일` : '-'}
+                  </div>
                 </div>
 
                 <div>

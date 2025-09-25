@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'business_system.settings')
 django.setup()
 
-from api.models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole
+from api.models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpApprovalRole, GuideDB
 
 def clear_existing_data():
     """기존 데이터 정리"""
@@ -180,7 +180,9 @@ def create_request_submissions():
     line_ids = [f"LINE-{str(i+1).zfill(3)}" for i in range(10)]
     ppids = [f"PP-{str(i+1).zfill(3)}" for i in range(5)]
     eqpids = [f"EQP-{str(i+1).zfill(3)}" for i in range(8)]
-    change_items = ['설정값 변경', '프로세스 파라미터 조정', '레시피 수정', '알람 임계값 변경', '운전 조건 변경']
+    guide_items = list(GuideDB.objects.values_list('item', 'standard_TAT'))
+    change_items = [item for item, _ in guide_items] or ['설정값 변경', '프로세스 파라미터 조정', '레시피 수정', '알람 임계값 변경', '운전 조건 변경']
+    tat_map = {item: tat for item, tat in guide_items}
     
     sample_contents = [
         "긴급 시스템 점검이 필요합니다. 성능 저하 이슈가 발견되어 즉시 대응이 필요한 상황입니다.",
@@ -197,16 +199,19 @@ def create_request_submissions():
         # 시간 분산 (최근 30일)
         submitted_time = datetime.now() - timedelta(days=random.randint(0, 30))
         
+        change_item = random.choice(change_items)
+
         request = RequestSubmission.objects.create(
             department=dept,
-            title=f"[{random.choice(line_ids)}_{random.choice(ppids)}_{random.choice(eqpids)}_{random.choice(change_items)}]",
+            title=f"[{random.choice(line_ids)}_{random.choice(ppids)}_{random.choice(eqpids)}_{change_item}]",
             content=random.choice(sample_contents),
             submitted_by=submitter.username,
             submitted_at=submitted_time,
             line_id=random.choice(line_ids),
             ppid=random.choice(ppids),
             eqpid=random.choice(eqpids),
-            change_request_items=random.choice(change_items),
+            change_request_items=change_item,
+            max_tat=tat_map.get(change_item),
             status=random.choice(statuses),
             assignee=random.choice([None, random.choice(employees).username])
         )
