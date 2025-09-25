@@ -41,6 +41,7 @@ interface RequestSubmission {
   ppid?: string;
   eqpid?: string;
   change_request_items?: string;
+  max_tat?: number;
   status?: string;
   assignee?: string;
 }
@@ -486,15 +487,23 @@ export default function Menu1() {
     setSelectedSubmission(null);
   };
 
+  const handleSubmissionUpdate = (updatedSubmission: RequestSubmission) => {
+    setSelectedSubmission(prev => {
+      if (!prev || prev.id !== updatedSubmission.id) return prev;
+      return { ...prev, ...updatedSubmission };
+    });
+  };
+
   // CSV 다운로드 함수
   const downloadCSV = () => {
     if (!filteredData.length) return;
 
     const headers = [
       'Line ID',
-      'PPID', 
+      'PPID',
       'EQPID',
       '변경의뢰 항목',
+      'Max TAT',
       '제목',
       '상신자',
       '의뢰날짜',
@@ -509,6 +518,7 @@ export default function Menu1() {
         submission.ppid || '',
         submission.eqpid || '',
         `"${(submission.change_request_items || '').replace(/"/g, '""')}"`,
+        submission.max_tat != null ? String(submission.max_tat) : '',
         `"${(submission.title || '').replace(/"/g, '""')}"`,
         submission.submitted_by || '',
         formatDate(submission.submitted_at),
@@ -738,6 +748,15 @@ export default function Menu1() {
                   currentFilter={filters.columnFilters.find(f => f.column === 'change_request_items')}
                 />
               </TableHead>
+              <TableHead className="w-20 min-w-20 text-xs">
+                <ColumnHeader
+                  column="max_tat"
+                  title="Max TAT"
+                  data={getUniqueValues('max_tat')}
+                  onFilterChange={handleColumnFilter}
+                  currentFilter={filters.columnFilters.find(f => f.column === 'max_tat')}
+                />
+              </TableHead>
               <TableHead className="flex-1 min-w-0 text-xs">제목</TableHead>
               <TableHead className="w-20 min-w-20 text-xs">
                 <ColumnHeader
@@ -769,29 +788,30 @@ export default function Menu1() {
               <TableHead className="w-20 min-w-20 text-xs">담당자</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                </TableRow>
-              ))
-            ) : filteredData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
-                  <div className="text-gray-500">
-                    검색 조건에 맞는 데이터가 없습니다.
-                  </div>
-                </TableCell>
-              </TableRow>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8">
+                      <div className="text-gray-500">
+                        검색 조건에 맞는 데이터가 없습니다.
+                      </div>
+                    </TableCell>
+                  </TableRow>
             ) : (
               filteredData.map((submission) => (
                 <TableRow 
@@ -810,6 +830,9 @@ export default function Menu1() {
                   </TableCell>
                   <TableCell className="text-xs text-gray-700 p-1 max-w-24 truncate" title={submission.change_request_items || '-'}>
                     {submission.change_request_items || '-'}
+                  </TableCell>
+                  <TableCell className="text-xs text-gray-700 p-1 text-center">
+                    {submission.max_tat != null ? `${submission.max_tat}일` : '-'}
                   </TableCell>
                   <TableCell className="p-1 min-w-0">
                     <div className="truncate" title={submission.title}>
@@ -854,6 +877,7 @@ export default function Menu1() {
         isOpen={isModalOpen}
         onClose={closeModal}
         submission={selectedSubmission}
+        onSubmissionUpdate={handleSubmissionUpdate}
       />
       
       {/* 코멘트 모달 */}
