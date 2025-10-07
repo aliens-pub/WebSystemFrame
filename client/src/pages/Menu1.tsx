@@ -21,7 +21,11 @@ import {
   Check,
   X,
   Download,
-  Send
+  Send,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
@@ -263,10 +267,18 @@ export default function Menu1() {
   const [isFilterInitialized, setIsFilterInitialized] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 8;
+  const PAGE_GROUP_SIZE = 5;
 
   useEffect(() => {
     setSearchInput(filters.searchTerm);
   }, [filters.searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   const applySearchTerm = () => {
     setFilters(prev => {
@@ -441,6 +453,35 @@ export default function Menu1() {
 
     return filtered;
   }, [submissionsData?.results, filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(prev => {
+      if (filteredData.length === 0) return 1;
+      return Math.min(prev, totalPages);
+    });
+  }, [filteredData.length, totalPages]);
+
+  const paginatedData = useMemo(() => {
+    if (!filteredData.length) return [];
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredData, currentPage]);
+
+  const startItemIndex = filteredData.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItemIndex = filteredData.length === 0 ? 0 : Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length);
+  const currentGroup = Math.floor((currentPage - 1) / PAGE_GROUP_SIZE);
+  const groupStart = currentGroup * PAGE_GROUP_SIZE + 1;
+  const groupEnd = Math.min(groupStart + PAGE_GROUP_SIZE - 1, totalPages);
+  const pageNumbers: number[] = [];
+  for (let page = groupStart; page <= groupEnd; page++) {
+    pageNumbers.push(page);
+  }
+  const shouldShowFirstPage = groupStart > 1;
+  const shouldShowLastPage = groupEnd < totalPages;
+  const shouldShowStartEllipsis = groupStart > 2;
+  const shouldShowEndEllipsis = groupEnd < totalPages - 1;
 
   const handleColumnFilter = (column: string, values: string[], sortOrder?: 'asc' | 'desc') => {
     setFilters(prev => ({
@@ -813,7 +854,7 @@ export default function Menu1() {
                     </TableCell>
                   </TableRow>
             ) : (
-              filteredData.map((submission) => (
+              paginatedData.map((submission) => (
                 <TableRow 
                   key={submission.id} 
                   className="hover:bg-gray-50 cursor-pointer"
@@ -871,6 +912,101 @@ export default function Menu1() {
           </TableBody>
         </Table>
       </div>
+
+      {filteredData.length > 0 && (
+        <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-6">
+          <span className="text-sm text-gray-600 text-center">
+            {startItemIndex} - {endItemIndex} / {filteredData.length}건
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              aria-label="첫 페이지"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              aria-label="이전 페이지"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {shouldShowFirstPage && (
+              <Button
+                key="first-page"
+                variant={currentPage === 1 ? "default" : "outline"}
+                size="sm"
+                className="h-8 min-w-[32px] px-2"
+                onClick={() => setCurrentPage(1)}
+              >
+                1
+              </Button>
+            )}
+
+            {shouldShowStartEllipsis && (
+              <span className="px-2 text-sm text-gray-500">...</span>
+            )}
+
+            {pageNumbers.map(page => (
+              <Button
+                key={page}
+                variant={page === currentPage ? "default" : "outline"}
+                size="sm"
+                className="h-8 min-w-[32px] px-2"
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </Button>
+            ))}
+
+            {shouldShowEndEllipsis && (
+              <span className="px-2 text-sm text-gray-500">...</span>
+            )}
+
+            {shouldShowLastPage && (
+              <Button
+                key="last-page"
+                variant={currentPage === totalPages ? "default" : "outline"}
+                size="sm"
+                className="h-8 min-w-[32px] px-2"
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                {totalPages}
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              aria-label="다음 페이지"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              aria-label="마지막 페이지"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 상세 보기 모달 */}
       <DetailedInfoModal

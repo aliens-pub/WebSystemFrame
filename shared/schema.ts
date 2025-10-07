@@ -4,6 +4,7 @@ import { z } from "zod";
 export const userSchema = z.object({
   id: z.number(),
   username: z.string(),
+  employee_number: z.string().nullable(),
   role: z.enum(['ENGINEER', 'MANAGER']),
   created_at: z.string(),
   updated_at: z.string(),

@@ -6,24 +6,10 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("api", "0009_guidedb"),
+        ("api", "0010_employee_employee_number_requestsubmission_excel_1_and_more"),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="requestsubmission",
-            name="excel_1",
-            field=models.TextField(
-                blank=True, null=True, verbose_name="엑셀 표1 (HTML)"
-            ),
-        ),
-        migrations.AddField(
-            model_name="requestsubmission",
-            name="excel_2",
-            field=models.TextField(
-                blank=True, null=True, verbose_name="엑셀 표2 (HTML)"
-            ),
-        ),
         migrations.AddField(
             model_name="requestsubmission",
             name="max_tat",

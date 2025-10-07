@@ -5,8 +5,9 @@ class Employee(models.Model):
         ('ENGINEER', 'Engineer'),
         ('MANAGER', 'Manager'),
     ]
-    
+
     username = models.CharField(max_length=150, unique=True)
+    employee_number = models.CharField(max_length=20, unique=True, verbose_name="사번", blank=True, null=True)
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
@@ -14,15 +15,26 @@ class Employee(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'employee'
-    
+
     def save(self, *args, **kwargs):
+        if self.employee_number:
+            try:
+                emp_info = EmpInfo.objects.get(emp_id=self.employee_number)
+                new_username = emp_info.name
+                if Employee.objects.filter(username=new_username).exclude(pk=self.pk).exists():
+                    new_username = f"{emp_info.name}_{self.employee_number}"
+                self.username = new_username
+            except EmpInfo.DoesNotExist:
+                if not self.username:
+                    self.username = self.employee_number
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
-        return f"{self.username} - {self.role}"
+        identifier = self.employee_number or 'N/A'
+        return f"{self.username} ({identifier}) - {self.role}"
 
 class EmpInfo(models.Model):
     name = models.CharField(max_length=100, verbose_name="직원 이름")

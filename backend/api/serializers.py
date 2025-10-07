@@ -4,7 +4,7 @@ from .models import Employee, EmpInfo, EmailTemplate, RequestSubmission, EmpAppr
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
-        fields = ['id', 'username', 'role', 'created_at', 'updated_at']
+        fields = ['id', 'username', 'employee_number', 'role', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 class LoginSerializer(serializers.Serializer):

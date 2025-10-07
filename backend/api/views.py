@@ -19,9 +19,9 @@ def login_view(request):
         # Try to find existing employee by employee_number
         try:
             employee = Employee.objects.get(employee_number=employee_number)
-            # If admin user already exists but not MANAGER, update auth
-            if employee_number == 'EMP9999999' and employee.auth != 'MANAGER':
-                employee.auth = 'MANAGER'
+            # If admin user already exists but not MANAGER, update role
+            if employee_number == 'EMP9999999' and employee.role != 'MANAGER':
+                employee.role = 'MANAGER'
                 employee.save()
         except Employee.DoesNotExist:
             # Create new employee
@@ -36,13 +36,13 @@ def login_view(request):
             employee = Employee.objects.create(
                 username=username,
                 employee_number=employee_number,
-                auth=default_role
+                role=default_role
             )
         
         # Store employee info in session
         request.session['employee_id'] = employee.id
         request.session['employee_username'] = employee.username
-        request.session['employee_role'] = employee.auth
+        request.session['employee_role'] = employee.role
         request.session['employee_number'] = employee.employee_number
         
         # Set session to not expire
@@ -108,7 +108,7 @@ def users_list_view(request):
     try:
         current_employee = Employee.objects.get(id=employee_id)
         # Only managers can view all users
-        if current_employee.auth != 'MANAGER':
+        if current_employee.role != 'MANAGER':
             return Response(
                 {'message': '관리자만 접근할 수 있습니다.'}, 
                 status=status.HTTP_403_FORBIDDEN
@@ -130,7 +130,7 @@ def update_user_role_view(request, user_id):
     try:
         current_employee = Employee.objects.get(id=employee_id)
         # Only managers can update auth
-        if current_employee.auth != 'MANAGER':
+        if current_employee.role != 'MANAGER':
             return Response(
                 {'message': '관리자만 접근할 수 있습니다.'}, 
                 status=status.HTTP_403_FORBIDDEN
@@ -140,7 +140,7 @@ def update_user_role_view(request, user_id):
         
         serializer = UpdateRoleSerializer(data=request.data)
         if serializer.is_valid():
-            target_employee.auth = serializer.validated_data['auth']
+            target_employee.role = serializer.validated_data['role']
             target_employee.save()
             return Response(EmployeeSerializer(target_employee).data)
         
@@ -338,7 +338,7 @@ def update_employee_roles_view(request):
         
         # 현재 사용자 권한 확인 (MANAGER만 권한 수정 가능)
         current_employee = Employee.objects.get(id=employee_id)
-        if current_employee.auth != 'MANAGER':
+        if current_employee.role != 'MANAGER':
             return Response({'error': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
         
         updates = request.data.get('updates', [])
@@ -349,22 +349,22 @@ def update_employee_roles_view(request):
         
         for update in updates:
             employee_id_to_update = update.get('employee_id')
-            new_auth = update.get('auth')
-            
-            if not employee_id_to_update or not new_auth:
+            new_role = update.get('role')
+
+            if not employee_id_to_update or not new_role:
                 continue
-                
-            if new_auth not in ['ENGINEER', 'MANAGER']:
+
+            if new_role not in ['ENGINEER', 'MANAGER']:
                 continue
-                
+
             try:
                 employee = Employee.objects.get(id=employee_id_to_update)
-                employee.auth = new_auth
+                employee.role = new_role
                 employee.save()
                 updated_employees.append({
                     'id': employee.id,
                     'username': employee.username,
-                    'auth': employee.auth
+                    'role': employee.role
                 })
             except Employee.DoesNotExist:
                 continue
@@ -409,7 +409,7 @@ def approval_roles_view(request):
             
             # 현재 사용자 권한 확인 (MANAGER만 결재 역할 설정 가능)
             current_employee = Employee.objects.get(id=employee_id)
-            if current_employee.auth != 'MANAGER':
+            if current_employee.role != 'MANAGER':
                 return Response({'error': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
             
             roles = request.data.get('roles', {})
